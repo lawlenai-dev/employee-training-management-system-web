@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Sarabun", sans-serif;
+
+  /* CHK Brand */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
+  /* CHK Accent — Amber */
+  --color-accent-50: var(--accent-50);
+  --color-accent-100: var(--accent-100);
+  --color-accent-200: var(--accent-200);
+  --color-accent-300: var(--accent-300);
+  --color-accent-400: var(--accent-400);
+  --color-accent-500: var(--accent-500);
+  --color-accent-600: var(--accent-600);
+  --color-accent-700: var(--accent-700);
+  --color-accent-800: var(--accent-800);
+  --color-accent-900: var(--accent-900);
+  /* สีสถานะ */
+  --color-success-50: var(--success-50);
+  --color-success-600: var(--success-600);
+  --color-warning-50: var(--warning-50);
+  --color-warning-600: var(--warning-600);
+  --color-danger-50: var(--danger-50);
+  --color-danger-600: var(--danger-600);
+  --color-danger-700: var(--danger-700);
+
+  /* สีตามหน้าที่ */
+  --color-app: var(--app-background);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-heading: var(--heading);
+  --color-body: var(--body-text);
+  --color-muted: var(--muted-text);
+  --color-placeholder: var(--placeholder);
+
+  /* รูปทรง */
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+
+  /* เงา */
+  --shadow-card:
+    0 1px 2px rgb(0 50 116 / 0.04), 0 4px 12px rgb(0 50 116 / 0.06);
+}
+
+/* CHK Theme */
+:root,
+[data-theme="chk"] {
+  /* สีหลักจากโลโก้ */
+  --brand-50: #eef5fc;
+  --brand-100: #d9e9f8;
+  --brand-200: #b8d5f0;
+  --brand-300: #87b8e4;
+  --brand-400: #4d91d2;
+  --brand-500: #1769ad;
+
+  /* สีโลโก้หลัก */
+  --brand-600: #003274;
+  --accent-600: #d97706;
+
+  /* สีรอง Amber */
+  --accent-50: #fffbeb;
+  --accent-100: #fef3c7;
+  --accent-200: #fde68a;
+  --accent-300: #fcd34d;
+  --accent-400: #fbbf24;
+  --accent-500: #f59e0b;
+  --accent-700: #b45309;
+  --accent-800: #92400e;
+  --accent-900: #78350f;
+
+  /* สี Hover และสีเข้ม */
+  --brand-700: #002b64;
+  --brand-800: #002452;
+  --brand-900: #001a3d;
+
+  /* พื้นหลัง */
+  --app-background: #f5f7fa;
+  --surface: #ffffff;
+  --surface-hover: #f8fafc;
+
+  /* Sidebar มือถือ */
+  --sidebar: #003274;
+  --sidebar-hover: #0b478f;
+
+  /* เส้นขอบ */
+  --border: #e5e7eb;
+  --border-strong: #cbd5e1;
+
+  /* ตัวอักษร */
+  --heading: #000000;
+  --body-text: #374151;
+  --muted-text: #6b7280;
+  --placeholder: #9ca3af;
+
+  /* สถานะสำเร็จ */
+  --success-50: #ecfdf5;
+  --success-600: #059669;
+
+  /* สถานะรอดำเนินการ */
+  --warning-50: #fffbeb;
+  --warning-600: #d97706;
+
+  /* สถานะผิดพลาด */
+  --danger-50: #fef2f2;
+  --danger-600: #dc2626;
+  --danger-700: #b91c1c;
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--app-background);
+  color: var(--body-text);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
