@@ -544,7 +544,7 @@ export default function Courses() {
 
                         {/* Action */}
                         <Link
-                          to={`/courses/${course.id}/attendance`}
+                          // to={`/courses/${course.id}/attendance`}
                           className="
               mt-4 flex w-full items-center justify-between
               rounded-2xl bg-brand-600 px-4 py-3.5
@@ -559,7 +559,7 @@ export default function Courses() {
                             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
                               <BookOpenCheck size={17} />
                             </span>
-                            เปิดหน้าเช็กชื่อ
+                            เปิดหน้าเช็กชื่อ 
                           </span>
 
                           <ArrowRight

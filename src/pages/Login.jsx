@@ -36,21 +36,21 @@ export default function Login() {
     // }
 
     try {
-    //   setLoading(true);
+      //   setLoading(true);
 
-    //   const response = await api("/auth/login", {
-    //     method: "POST",
-    //     body: JSON.stringify({
-    //       username: form.username.trim(),
-    //       password: form.password,
-    //     }),
-    //   });
+      //   const response = await api("/auth/login", {
+      //     method: "POST",
+      //     body: JSON.stringify({
+      //       username: form.username.trim(),
+      //       password: form.password,
+      //     }),
+      //   });
 
-    //   if (remember) {
-    //     localStorage.setItem("access_token", response.data.token);
-    //   } else {
-    //     sessionStorage.setItem("access_token", response.data.token);
-    //   }
+      //   if (remember) {
+      //     localStorage.setItem("access_token", response.data.token);
+      //   } else {
+      //     sessionStorage.setItem("access_token", response.data.token);
+      //   }
 
       navigate("/dashboard");
     } catch (err) {

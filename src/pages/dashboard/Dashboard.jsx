@@ -1,7 +1,16 @@
-import { ArrowRight, BookOpenCheck, CalendarCheck, Check, Clock3, QrCode, Users } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpenCheck,
+  CalendarCheck,
+  Check,
+  Clock3,
+  QrCode,
+  Users,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import HeroCover from "../components/HeroCover";
-import { recentTrainings } from "../data";
+import HeroCover from "../../components/HeroCover";
+import { courseTrainingData, recentTrainings } from "../../data";
+import CourseTrainingPieChart from "./component/CourseTrainingPieChart";
 
 const summaries = [
   {
@@ -115,7 +124,7 @@ export default function Dashboard() {
 
           <button
             type="button"
-             onClick={() => navigate("/courses")}
+            onClick={() => navigate("/courses")}
             className="
         inline-flex items-center gap-2 self-start
         text-sm font-semibold text-brand-600
@@ -127,7 +136,15 @@ export default function Dashboard() {
             <ArrowRight size={17} />
           </button>
         </div>
-
+        <div
+          className="
+      mt-8 overflow-hidden rounded-card
+      border border-border bg-surface
+      shadow-card
+    "
+        >
+          <CourseTrainingPieChart data={courseTrainingData} />
+        </div>
         {/* ตาราง */}
         <div
           className="
@@ -159,10 +176,6 @@ export default function Dashboard() {
 
                   <th className="whitespace-nowrap px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-muted">
                     ผู้เข้าอบรม
-                  </th>
-
-                  <th className="whitespace-nowrap px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted">
-                    สถานะ
                   </th>
                 </tr>
               </thead>
@@ -213,7 +226,7 @@ export default function Dashboard() {
                     </td>
 
                     {/* สถานะ */}
-                    <td className="whitespace-nowrap px-6 py-4">
+                    {/* <td className="whitespace-nowrap px-6 py-4">
                       {training.status === "synced" ? (
                         <span
                           className="
@@ -237,7 +250,7 @@ export default function Dashboard() {
                           รอซิงก์ (ออฟไลน์)
                         </span>
                       )}
-                    </td>
+                    </td> */}
                   </tr>
                 ))}
               </tbody>

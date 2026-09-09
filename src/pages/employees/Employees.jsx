@@ -76,13 +76,10 @@ export default function Employees() {
       },
       {
         header: "ชื่อ–นามสกุล",
-        accessor: "full_name",
+        accessor: (row) =>
+          `${row.first_name || ""} ${row.last_name || ""}`.trim(),
         cell: ({ value }) => (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 font-bold text-brand-600">
-              {value?.charAt(0)?.toUpperCase() || "E"}
-            </div>
-
             <div>
               <p className="font-semibold text-heading">{value || "-"}</p>
               <p className="mt-0.5 text-xs text-muted">พนักงาน CHK</p>

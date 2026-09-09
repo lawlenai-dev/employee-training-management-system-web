@@ -4,7 +4,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import { Loading } from "./components/Ui";
 
-const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Dashboard = lazy(() => import("./pages/dashboard/Dashboard"));
 const Courses = lazy(() => import("./pages/courses/Courses"));
 const Attendance = lazy(() => import("./pages/Attendance"));
 const Employees = lazy(() => import("./pages/employees/Employees"));

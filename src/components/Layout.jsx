@@ -56,13 +56,13 @@ export default function Layout() {
             </div> */}
 
             <div>
-              <p
+              {/* <p
                 className={`text-xl font-bold ${
                   isHome ? "text-white" : "text-heading"
                 }`}
               >
                 CHK
-              </p>
+              </p> */}
 
               <p
                 className={`text-xs ${isHome ? "text-white/65" : "text-muted"}`}
