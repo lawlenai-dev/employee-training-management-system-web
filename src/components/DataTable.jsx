@@ -25,23 +25,56 @@ export function getCellValue(row, column, rowIndex) {
   return undefined;
 }
 
-export function CellValue({ row, column, rowIndex }) {
-  const value = getCellValue(row, column, rowIndex);
+function CellValue({ row, column, rowIndex }) {
+  let value;
+
+  // accessor เป็น function
+  if (typeof column.accessor === "function") {
+    value = column.accessor(row, rowIndex);
+  }
+
+  // accessor เป็น string เช่น "supplierNameTH"
+  else if (typeof column.accessor === "string") {
+    value = getValueByPath(row, column.accessor);
+  }
+
+  // รองรับ key จาก config เดิม
+  else if (column.key) {
+    value = getValueByPath(row, column.key);
+  }
 
   if (typeof column.cell === "function") {
     return column.cell({
       value,
       row,
-      column,
       rowIndex,
+      column,
     });
   }
 
-  if (typeof column.render === "function") {
-    return column.render(value, row);
+  if (column.key === "status" || column.accessor === "status") {
+    const isActive = value === "active";
+
+    return (
+      <span
+        className={`
+          inline-flex items-center gap-1.5
+          rounded-full px-3 py-1.5
+          text-xs font-semibold
+          ${
+            isActive
+              ? "bg-success-50 text-success-600"
+              : "bg-slate-100 text-slate-500"
+          }
+        `}
+      >
+        {isActive && <CheckCircle2 size={14} />}
+        {isActive ? "ใช้งาน" : "ไม่ใช้งาน"}
+      </span>
+    );
   }
 
-  return value ?? column.fallback ?? "-";
+  return value !== null && value !== undefined && value !== "" ? value : "-";
 }
 
 function getColumnId(column, columnIndex) {

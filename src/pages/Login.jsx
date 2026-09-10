@@ -94,14 +94,14 @@ export default function Login() {
   "
       >
         {/* แถบด้านบน */}
-        <div className="flex items-center justify-between px-6 pt-5">
-          <p className="text-xs font-bold text-slate-600">CHK</p>
+        {/* <div className="flex items-center justify-between px-6 pt-5">
+          <p className="text-xs font-bold text-slate-600"></p>
 
           <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
             <Check size={14} strokeWidth={3} />
             พร้อมใช้งาน
           </div>
-        </div>
+        </div> */}
 
         <div className="px-5 pb-4 pt-2 sm:pt-10 sm:px-8 ">
           {/* Logo */}
@@ -248,7 +248,15 @@ export default function Login() {
                 ลืมรหัสผ่าน?
               </button>
             </div> */}
-
+            <div className="flex items-center justify-between gap-3">
+              <div />
+              <button
+                type="button"
+                className="text-sm font-semibold text-blue-700 hover:underline"
+              >
+                เปลี่ยน Password
+              </button>
+            </div>
             {/* Error */}
             {error && (
               <div
@@ -290,9 +298,9 @@ export default function Login() {
 
           {/* Footer */}
           <div className="mt-6 text-center">
-            <p className="text-xs text-slate-400">
+            {/* <p className="text-xs text-slate-400">
               ระบบสามารถใช้งานภายในเครือข่ายของบริษัท
-            </p>
+            </p> */}
           </div>
         </div>
       </main>

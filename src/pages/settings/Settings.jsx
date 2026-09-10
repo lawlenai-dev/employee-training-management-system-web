@@ -1,8 +1,7 @@
 import {
   CheckCircle2,
   ChevronRight,
-  KeyRound,
-  MenuIcon,
+  // KeyRound,
   Pencil,
   Plus,
   Search,
@@ -16,8 +15,8 @@ import { useMemo, useState } from "react";
 import HeroCover from "../../components/HeroCover";
 import { Button } from "../../components/Ui";
 import DataTable from "../../components/DataTable";
-import { positionMockup } from "../../data";
-
+import { positionMockup, supplierMockup } from "../../data";
+import PersonalSetting from "./components/PersonnalSetting";
 /* ---------------- Mockup data ---------------- */
 
 const settingsConfig = {
@@ -86,6 +85,44 @@ const settingsConfig = {
     ],
 
     rows: positionMockup,
+  },
+  suppliers: {
+    title: "Suppliers",
+    thaiTitle: "บริษัท",
+    description: "รายชื่อบริษัท",
+    addLabel: "เพิ่มรายชื่อบริษัท",
+    icon: Shapes,
+
+    columns: [
+      {
+        key: "rowNumber",
+        label: "ลำดับ",
+        accessor: (_row, rowIndex) => rowIndex + 1,
+        cellClassName: "w-20 font-semibold text-muted",
+      },
+      {
+        key: "supplierNameTH",
+        label: "ชื่อบริษัท (ไทย)",
+        accessor: "supplierNameTH",
+      },
+      {
+        key: "supplierNameEN",
+        label: "ชื่อบริษัท (อังกฤษ)",
+        accessor: "supplierNameEN",
+      },
+      {
+        key: "address",
+        label: "ที่อยู่",
+        accessor: "address",
+      },
+      {
+        key: "status",
+        label: "สถานะ",
+        accessor: "status",
+      },
+    ],
+
+    rows: supplierMockup,
   },
   categories: {
     title: "Category",
@@ -190,28 +227,42 @@ const settingsConfig = {
   },
 };
 
+const personalSetting = {
+  title: "Personal",
+  thaiTitle: "ส่วนข้อมูลส่วนบุคคล",
+  description: "จัดการข้อมูลส่วนบุคคลของพนักงาน",
+  addLabel: "เพิ่มข้อมูล",
+  icon: UsersRound,
+};
 /* ---------------- Component ---------------- */
 
 export default function Settings() {
   const [activeMenu, setActiveMenu] = useState("users");
   const [search, setSearch] = useState("");
 
-  const currentSetting = settingsConfig[activeMenu];
-  const CurrentIcon = currentSetting.icon;
+  const currentSetting =
+    activeMenu === "personal" ? personalSetting : settingsConfig[activeMenu];
+  const CurrentIcon = currentSetting?.icon ?? SettingsIcon;
 
   const filteredRows = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
-    if (!keyword) {
-      return currentSetting.rows;
+    if (activeMenu === "personal") {
+      return [];
     }
 
-    return currentSetting.rows.filter((row) =>
+    const rows = currentSetting?.rows ?? [];
+
+    if (!keyword) {
+      return rows;
+    }
+
+    return rows.filter((row) =>
       Object.values(row).some((value) =>
         String(value).toLowerCase().includes(keyword),
       ),
     );
-  }, [currentSetting, search]);
+  }, [activeMenu, currentSetting, search]);
 
   const handleSelectMenu = (menuKey) => {
     setActiveMenu(menuKey);
@@ -220,12 +271,18 @@ export default function Settings() {
 
   const tableColumns = useMemo(
     () =>
-      currentSetting.columns.map((column) => ({
+      (currentSetting?.columns ?? []).map((column) => ({
         id: column.key,
         header: column.label,
-        accessor: column.key,
+        accessor: column.accessor ?? column.key,
+        headerClassName: column.headerClassName,
+        cellClassName: column.cellClassName,
 
-        cell: ({ value }) => <CellValue column={column.key} value={value} />,
+        cell:
+          column.cell ??
+          (({ value }) => (
+            <CellValue column={column.key} value={value} />
+          )),
       })),
     [currentSetting],
   );
@@ -239,7 +296,7 @@ export default function Settings() {
         eyebrow="System Configuration"
         eyebrowIcon={SettingsIcon}
         title="ตั้งค่า"
-        highlight="ระบบฝึกอบรม"
+        // highlight="ระบบฝึกอบรม"
         description="จัดการผู้ใช้งาน สิทธิ์ หมวดหมู่ และประเภทหลักสูตร"
       />
 
@@ -264,9 +321,8 @@ export default function Settings() {
             <nav className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
               {/*  Personnal Information Setting  */}
               <button
-                // key={menuKey}
                 type="button"
-                // onClick={() => handleSelectMenu(menuKey)}
+                onClick={() => handleSelectMenu("personal")}
                 className={`
                         group flex items-center gap-3 rounded-control
                         px-3 py-3 text-left transition
@@ -287,7 +343,7 @@ export default function Settings() {
                           }
                         `}
                 >
-                  <MenuIcon size={18} />
+                  <UsersRound size={18} />
                 </span>
 
                 <span className="min-w-0 flex-1">
@@ -309,7 +365,7 @@ export default function Settings() {
               {Object.entries(settingsConfig).map(([menuKey, menu]) => {
                 const MenuIcon = menu.icon;
                 const isActive = activeMenu === menuKey;
-                console.log(menuKey);
+
                 return (
                   <button
                     key={menuKey}
@@ -360,9 +416,13 @@ export default function Settings() {
           </aside>
 
           {/* พื้นที่ข้อมูล */}
-          <main className="min-w-0 overflow-hidden rounded-card border border-border bg-surface shadow-card">
-            {/* Header */}
-            <div className="border-b border-border px-5 py-5 sm:px-6">
+          <main className="min-w-0">
+            {activeMenu === "personal" ? (
+              <PersonalSetting />
+            ) : (
+              <div className="overflow-hidden rounded-card border border-border bg-surface shadow-card">
+                {/* Header */}
+                <div className="border-b border-border px-5 py-5 sm:px-6">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
@@ -371,18 +431,18 @@ export default function Settings() {
 
                   <div>
                     <h1 className="text-xl font-bold text-heading">
-                      {currentSetting.thaiTitle}
+                      {currentSetting?.thaiTitle}
                     </h1>
 
                     <p className="mt-1 text-sm text-muted">
-                      {currentSetting.description}
+                      {currentSetting?.description}
                     </p>
                   </div>
                 </div>
 
                 <Button className="w-full xl:w-auto">
                   <Plus size={18} />
-                  {currentSetting.addLabel}
+                  {currentSetting?.addLabel}
                 </Button>
               </div>
 
@@ -390,14 +450,14 @@ export default function Settings() {
               <div className="relative mt-5 max-w-md">
                 <Search
                   size={18}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                 />
 
                 <input
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder={`ค้นหา${currentSetting.thaiTitle}...`}
+                  placeholder={`ค้นหา${currentSetting?.thaiTitle}...`}
                   className="
                     h-11 w-full rounded-control border border-border
                     bg-white pl-10 pr-4 text-sm text-body
@@ -406,17 +466,16 @@ export default function Settings() {
                   "
                 />
               </div>
-            </div>
+                </div>
 
-            {/* Table */}
-            <DataTable
-              columns={tableColumns}
-              data={filteredRows}
-              rowKey="id"
-              emptyMessage="ไม่พบข้อมูล"
-              actions={(row) => (
-                <div className="inline-flex items-center gap-1">
-                  {activeMenu === "users" && (
+                <DataTable
+                  columns={tableColumns}
+                  data={filteredRows}
+                  rowKey="id"
+                  emptyMessage="ไม่พบข้อมูล"
+                  actions={(row) => (
+                    <div className="inline-flex items-center gap-1">
+                  {/* {activeMenu === "users" && (
                     <button
                       type="button"
                       title="กำหนดสิทธิ์"
@@ -428,7 +487,7 @@ export default function Settings() {
                     >
                       <KeyRound size={17} />
                     </button>
-                  )}
+                  )} */}
 
                   <button
                     type="button"
@@ -453,18 +512,20 @@ export default function Settings() {
                   >
                     <Trash2 size={17} />
                   </button>
+                    </div>
+                  )}
+                />
+
+                {/* Footer */}
+                <div className="flex items-center justify-between border-t border-border bg-slate-50/70 px-5 py-3">
+                  <p className="text-xs text-muted">
+                    แสดง {filteredRows.length} รายการ
+                  </p>
+
+                  <p className="text-xs text-muted">ข้อมูลตัวอย่าง</p>
                 </div>
-              )}
-            />
-
-            {/* Footer */}
-            <div className="flex items-center justify-between border-t border-border bg-slate-50/70 px-5 py-3">
-              <p className="text-xs text-muted">
-                แสดง {filteredRows.length} รายการ
-              </p>
-
-              <p className="text-xs text-muted">ข้อมูลตัวอย่าง</p>
-            </div>
+              </div>
+            )}
           </main>
         </div>
       </section>

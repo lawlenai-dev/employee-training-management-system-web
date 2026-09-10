@@ -141,13 +141,13 @@ export default function Layout() {
             <div className="h-12 w-12 overflow-hidden rounded-full bg-white p-1">
               <img
                 src={Logo}
-                alt="CHK Logo"
+                // alt="CHK Logo"
                 className="h-full w-full rounded-full object-contain"
               />
             </div>
 
             <div>
-              <p className="text-xl font-bold">CHK</p>
+              <p className="text-xl font-bold"></p>
               <p className="text-xs text-white/60">Employee Training System</p>
             </div>
           </div>

@@ -82,7 +82,7 @@ export default function Employees() {
           <div className="flex items-center gap-3">
             <div>
               <p className="font-semibold text-heading">{value || "-"}</p>
-              <p className="mt-0.5 text-xs text-muted">พนักงาน CHK</p>
+              <p className="mt-0.5 text-xs text-muted">พนักงาน </p>
             </div>
           </div>
         ),
@@ -275,7 +275,7 @@ export default function Employees() {
                   แสดง {employees.length} รายการ
                 </p>
 
-                <p className="text-xs text-muted">CHK Employee Database</p>
+                <p className="text-xs text-muted"> Employee Database</p>
               </div>
             </Card>
           )}

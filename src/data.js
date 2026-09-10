@@ -170,7 +170,7 @@ const coursesMockup = [
     end_time: "12:00:00",
     location: "Maintenance Room",
     instructor: "ธนกร วงศ์ดี",
-    status: "DRAFT",
+    status: "OPEN",
     created_at: "2026-08-22 09:00:00",
     updated_at: "2026-08-22 09:00:00",
   },
@@ -493,6 +493,17 @@ const courseTrainingData = [
   },
 ];
 
+const supplierMockup = [
+  {
+    id: 1,
+    supplierNameTH: "บริษัท ลอว์เลนส์ เทค จำกัด",
+    supplierNameEN: "LAWLENS TECH Co., Ltd.",
+    address:
+      "25 อาคารอัลม่า ลิงค์ ห้องเลขที่ 647 ชั้นที่ 17 ซอย ชิดลม ถนนเพลินจิต แขวงปทุมวัน เขตปทุมวัน กรุงเทพมหานคร 10330",
+    status: 'active',
+  },
+];
+
 export {
   employeesMockup,
   coursesMockup,
@@ -500,4 +511,5 @@ export {
   recentTrainings,
   positionMockup,
   courseTrainingData,
+  supplierMockup,
 };

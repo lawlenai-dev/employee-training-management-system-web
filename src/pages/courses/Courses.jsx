@@ -32,7 +32,6 @@ const statusStyles = {
 
 const statusLabels = {
   OPEN: "เปิดรับลงทะเบียน",
-  DRAFT: "ฉบับร่าง",
   CLOSED: "ปิดหลักสูตร",
   CANCELLED: "ยกเลิก",
 };
@@ -524,11 +523,11 @@ export default function Courses() {
 
                             <div>
                               <p className="text-xs text-muted">
-                                ผู้เข้าร่วมอบรม
+                                Session
                               </p>
 
                               <p className="mt-0.5 text-sm font-semibold text-heading">
-                                เช็กชื่อเรียบร้อยแล้ว
+                                รอบที่เข้าอบรม
                               </p>
                             </div>
                           </div>
@@ -538,7 +537,7 @@ export default function Courses() {
                               {course.attendance_count ?? 0}
                             </p>
 
-                            <p className="mt-1 text-[11px] text-muted">คน</p>
+                            <p className="mt-1 text-[11px] text-muted">รอบ</p>
                           </div>
                         </div>
 
