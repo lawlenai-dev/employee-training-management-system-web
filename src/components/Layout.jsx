@@ -138,13 +138,13 @@ export default function Layout() {
       >
         <div className="flex h-20 items-center justify-between border-b border-white/10 px-5">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 overflow-hidden rounded-full bg-white p-1">
+            {/* <div className="h-12 w-12 overflow-hidden rounded-full bg-white p-1">
               <img
                 src={Logo}
                 // alt="CHK Logo"
                 className="h-full w-full rounded-full object-contain"
               />
-            </div>
+            </div> */}
 
             <div>
               <p className="text-xl font-bold"></p>
