@@ -1,4 +1,30 @@
-const sizeStyles = {
+import type { CSSProperties, ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+
+type HeroCoverSize = "large" | "medium" | "small";
+
+type HeroCoverProps = {
+  size?: HeroCoverSize;
+  image?: string;
+  imagePosition?: CSSProperties["objectPosition"];
+  eyebrow?: string;
+  eyebrowIcon?: LucideIcon;
+  title: string;
+  highlight?: string;
+  description?: string;
+  children?: ReactNode;
+  className?: string;
+};
+
+const sizeStyles: Record<
+  HeroCoverSize,
+  {
+    section: string;
+    content: string;
+    title: string;
+    description: string;
+  }
+> = {
   large: {
     section: "min-h-[560px]",
     content: "min-h-[560px] pb-32 pt-28",
@@ -32,7 +58,7 @@ export default function HeroCover({
   description,
   children,
   className = "",
-}) {
+}: HeroCoverProps) {
   const styles = sizeStyles[size] ?? sizeStyles.medium;
 
   return (
@@ -51,13 +77,10 @@ export default function HeroCover({
         style={{ objectPosition: imagePosition }}
       />
 
-      {/* Overlay จากซ้ายไปขวา */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#001a3d]/95 via-[#003274]/80 to-[#003274]/35" />
 
-      {/* เงาด้านล่าง */}
       <div className="absolute inset-0 bg-gradient-to-t from-[#001a3d]/70 via-transparent to-transparent" />
 
-      {/* เนื้อหา */}
       <div
         className={`
           relative mx-auto flex max-w-7xl items-center
@@ -83,9 +106,7 @@ export default function HeroCover({
             {title}
 
             {highlight && (
-              <span className="block text-[#a9c9ef]">
-                {highlight}
-              </span>
+              <span className="block text-[#a9c9ef]">{highlight}</span>
             )}
           </h1>
 
@@ -101,9 +122,7 @@ export default function HeroCover({
           )}
 
           {children && (
-            <div className="mt-8 flex flex-wrap gap-3">
-              {children}
-            </div>
+            <div className="mt-8 flex flex-wrap gap-3">{children}</div>
           )}
         </div>
       </div>

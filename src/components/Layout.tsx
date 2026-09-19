@@ -1,35 +1,75 @@
-import { BookOpenCheck, LayoutDashboard, Menu, Users, X } from "lucide-react";
+import {
+  BookOpenCheck,
+  ClipboardCheck,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Settings,
+  ShieldCheck,
+  Users,
+  X,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
-import { NavLink, useLocation, Outlet } from "react-router-dom";
-import Logo from "../assets/logo.png";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import type { Permission } from "../auth/AuthContext";
+import { useAuth } from "../auth/AuthContext";
 
-const links = [
+type NavigationLink = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  permissions: Permission[];
+};
+
+const links: NavigationLink[] = [
   {
     to: "/dashboard",
     label: "ภาพรวม",
     icon: LayoutDashboard,
+    permissions: ["dashboard.view"],
   },
   {
     to: "/courses",
     label: "หลักสูตร",
     icon: BookOpenCheck,
+    permissions: ["courses.view"],
   },
   {
     to: "/employees",
     label: "ข้อมูลพนักงาน",
     icon: Users,
+    permissions: ["employees.view_all", "employees.view_company"],
+  },
+  {
+    to: "/pre-registrations",
+    label: "Pre-register",
+    icon: ClipboardCheck,
+    permissions: ["preregistration.view_own", "preregistration.review"],
   },
   {
     to: "/settings",
     label: "ตั้งค่า",
-    icon: Users,
+    icon: Settings,
+    permissions: ["settings.view"],
   },
 ];
 
 export default function Layout() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout, hasAnyPermission } = useAuth();
   const isHome = location.pathname === "/dashboard";
+  const isDashboard = location.pathname === "/courses";
+  const visibleLinks = links.filter((link) =>
+    hasAnyPermission(link.permissions),
+  );
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-app font-sans text-body">
@@ -38,7 +78,7 @@ export default function Layout() {
         className={`
           inset-x-0 top-0 z-40 border-b transition
           ${
-            isHome
+            isHome || isDashboard
               ? "absolute border-white/10 bg-[#001a3d]/45 text-white backdrop-blur-md"
               : "sticky border-border bg-surface/95 text-heading shadow-sm backdrop-blur-md"
           }
@@ -65,7 +105,7 @@ export default function Layout() {
               </p> */}
 
               <p
-                className={`text-xs ${isHome ? "text-white/65" : "text-muted"}`}
+                className={`text-xs ${isHome || isDashboard ? "text-white/65" : "text-muted"}`}
               >
                 Employee Training System
               </p>
@@ -74,7 +114,7 @@ export default function Layout() {
 
           {/* Desktop Navbar */}
           <nav className="hidden items-center gap-1 lg:flex">
-            {links.map(({ to, label }) => (
+            {visibleLinks.map(({ to, label }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -84,10 +124,10 @@ export default function Layout() {
                   text-sm font-medium transition
                   ${
                     isActive
-                      ? isHome
+                      ? isHome || isDashboard
                         ? "bg-white/15 text-white"
                         : "bg-brand-50 text-brand-600"
-                      : isHome
+                      : isHome || isDashboard
                         ? "text-white/75 hover:bg-white/10 hover:text-white"
                         : "text-body hover:bg-brand-50 hover:text-brand-600"
                   }
@@ -98,6 +138,35 @@ export default function Layout() {
             ))}
           </nav>
 
+          <div className="hidden items-center gap-2 lg:flex">
+            <div
+              className={`rounded-xl px-3 py-2 text-right ${
+                isHome || isDashboard ? "bg-white/10" : "bg-slate-100"
+              }`}
+            >
+              <p className="text-xs font-bold">{user?.name}</p>
+              <p
+                className={`text-[11px] ${
+                  isHome || isDashboard ? "text-white/65" : "text-muted"
+                }`}
+              >
+                {user?.roleName}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="ออกจากระบบ"
+              className={`rounded-xl p-2.5 transition ${
+                isHome || isDashboard
+                  ? "text-white/75 hover:bg-white/10 hover:text-white"
+                  : "text-slate-500 hover:bg-red-50 hover:text-red-600"
+              }`}
+            >
+              <LogOut size={19} />
+            </button>
+          </div>
+
           {/* ปุ่มเมนูมือถือ */}
           <button
             type="button"
@@ -105,7 +174,7 @@ export default function Layout() {
             className={`
               rounded-control p-2.5 transition lg:hidden
               ${
-                isHome
+                isHome || isDashboard
                   ? "text-white hover:bg-white/10"
                   : "text-heading hover:bg-brand-50"
               }
@@ -117,7 +186,6 @@ export default function Layout() {
         </div>
       </header>
 
-      {/* Overlay มือถือ */}
       {open && (
         <button
           type="button"
@@ -163,7 +231,7 @@ export default function Layout() {
         </div>
 
         <nav className="space-y-2 p-4">
-          {links.map(({ to, label, icon: Icon }) => (
+          {visibleLinks.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -184,6 +252,24 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+
+        <div className="absolute inset-x-0 bottom-0 border-t border-white/10 p-4">
+          <div className="mb-3 flex items-center gap-3 rounded-xl bg-white/10 p-3">
+            <ShieldCheck size={20} className="text-amber-300" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{user?.name}</p>
+              <p className="text-xs text-white/60">{user?.roleName}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-brand-700"
+          >
+            <LogOut size={18} />
+            ออกจากระบบ
+          </button>
+        </div>
       </aside>
 
       <main>

@@ -1,127 +1,289 @@
-const employeesMockup = [
+export type ActiveStatus = "active" | "inactive";
+export type CourseStatus = "OPEN" | "DRAFT" | "CLOSED" | "CANCELLED";
+
+export type EmployeeDetail = {
+  id: number;
+  employee_code: string;
+  prefix: string;
+  first_name: string;
+  last_name: string;
+  gender: string;
+  nationality: string;
+  blood_group: string;
+  department: string;
+  position: string;
+  supplier_name: string;
+  birth_date: string;
+  qr_token: string;
+  is_active: number;
+  created_at: string;
+  updated_at: string;
+};
+export type CourseMock = {
+  id: number;
+  title: string;
+  description: string;
+  course_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  instructor: string;
+  status: CourseStatus;
+  attendance_count?: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AttendanceMock = {
+  id: number;
+  course_id: number;
+  employee_id: number;
+  checkin_method: "qr" | "manual";
+  checked_in_at: string;
+};
+
+export type RecentTraining = {
+  id: number;
+  date: string;
+  courseCode: string;
+  courseName: string;
+  location: string;
+  trainer: string;
+  attendees: number;
+  status: "synced" | "offline";
+};
+
+export type PositionMock = {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  status: ActiveStatus;
+};
+
+export type CourseTrainingDatum = {
+  id: number;
+  courseId: number;
+  courseCode: string;
+  courseName: string;
+  category: string;
+  employees: number;
+  completed: number;
+  absent: number;
+  percentage: number;
+  color: string;
+};
+
+export type SupplierMock = {
+  id: number;
+  supplierNameTH: string;
+  supplierNameEN: string;
+  address: string;
+  status: ActiveStatus;
+};
+
+export type UserPermissionMock = {
+  id: number;
+  name: string;
+  username: string;
+  department: string;
+  role: string;
+  status: ActiveStatus;
+};
+
+const employeesMockup: EmployeeDetail[] = [
   {
     id: 1,
     employee_code: "EMP001",
+    prefix: "นาย",
     first_name: "สมชาย",
     last_name: "ใจดี",
+    gender: "ชาย",
+    nationality: "ไทย",
+    blood_group: "A",
+    birth_date: "1995-03-12",
     department: "Production",
     position: "Production Engineer",
     qr_token: "QR_EMP001_A8F32K",
+    supplier_name: "",
     is_active: 1,
     created_at: "2026-08-01 08:30:00",
     updated_at: "2026-08-01 08:30:00",
   },
+
   {
     id: 2,
     employee_code: "EMP002",
+    prefix: "นางสาว",
     first_name: "สมหญิง",
     last_name: "รักงาน",
+    gender: "หญิง",
+    nationality: "ไทย",
+    blood_group: "B",
+    birth_date: "1998-07-25",
     department: "Quality Control",
     position: "QC Engineer",
     qr_token: "QR_EMP002_B7G21L",
+    supplier_name: "",
     is_active: 1,
     created_at: "2026-08-01 08:35:00",
     updated_at: "2026-08-01 08:35:00",
   },
+
   {
     id: 3,
     employee_code: "EMP003",
-    first_name: "กิตติ",
-    last_name: "พัฒนาการ",
+    prefix: "นาย",
+    first_name: "คำหล้า",
+    last_name: "วงสะหวัน",
+    gender: "ชาย",
+    nationality: "ลาว",
+    blood_group: "O",
+    birth_date: "1992-11-08",
     department: "Maintenance",
     position: "Maintenance Technician",
     qr_token: "QR_EMP003_C6H54M",
+    supplier_name: "",
     is_active: 1,
     created_at: "2026-08-02 09:00:00",
     updated_at: "2026-08-02 09:00:00",
   },
+
   {
     id: 4,
     employee_code: "EMP004",
+    prefix: "นาย",
     first_name: "อนันต์",
     last_name: "มีสุข",
+    gender: "ชาย",
+    nationality: "ไทย",
+    blood_group: "AB",
+    birth_date: "2000-01-19",
     department: "Production",
     position: "Operator",
     qr_token: "QR_EMP004_D5J87N",
+    supplier_name: "",
     is_active: 1,
     created_at: "2026-08-02 09:15:00",
     updated_at: "2026-08-02 09:15:00",
   },
+
   {
     id: 5,
     employee_code: "EMP005",
+    prefix: "นางสาว",
     first_name: "นภัสสร",
     last_name: "ศรีสุข",
+    gender: "หญิง",
+    nationality: "ไทย",
+    blood_group: "A",
+    birth_date: "1997-09-30",
     department: "Human Resources",
     position: "HR Officer",
     qr_token: "QR_EMP005_E4K63P",
+    supplier_name: "",
     is_active: 1,
     created_at: "2026-08-03 10:00:00",
     updated_at: "2026-08-03 10:00:00",
   },
+
   {
     id: 6,
     employee_code: "EMP006",
-    first_name: "ธนกร",
-    last_name: "วงศ์ดี",
+    prefix: "นาย",
+    first_name: "บุญมี",
+    last_name: "แก้ววิไล",
+    gender: "ชาย",
+    nationality: "ลาว",
+    blood_group: "B",
+    birth_date: "1994-04-16",
     department: "IT",
     position: "IT Support",
     qr_token: "QR_EMP006_F3L92Q",
+    supplier_name: "",
     is_active: 1,
     created_at: "2026-08-03 10:20:00",
     updated_at: "2026-08-03 10:20:00",
   },
+
   {
     id: 7,
     employee_code: "EMP007",
+    prefix: "นาง",
     first_name: "ปวีณา",
     last_name: "สุขใจ",
+    gender: "หญิง",
+    nationality: "ไทย",
+    blood_group: "O",
+    birth_date: "1990-12-05",
     department: "Accounting",
     position: "Accountant",
     qr_token: "QR_EMP007_G2M45R",
+    supplier_name: "",
     is_active: 1,
     created_at: "2026-08-04 08:45:00",
     updated_at: "2026-08-04 08:45:00",
   },
+
   {
     id: 8,
     employee_code: "EMP008",
-    first_name: "วรพล",
-    last_name: "ตั้งใจทำ",
+    prefix: "นาย",
+    first_name: "สมพร",
+    last_name: "สีวิไล",
+    gender: "ชาย",
+    nationality: "ลาว",
+    blood_group: "AB",
+    birth_date: "1988-06-21",
     department: "Warehouse",
     position: "Warehouse Supervisor",
     qr_token: "QR_EMP008_H1N78S",
+    supplier_name: "",
     is_active: 1,
     created_at: "2026-08-04 09:30:00",
     updated_at: "2026-08-04 09:30:00",
   },
+
   {
     id: 9,
     employee_code: "EMP009",
+    prefix: "นางสาว",
     first_name: "ชลธิชา",
     last_name: "แก้วใส",
+    gender: "หญิง",
+    nationality: "ไทย",
+    blood_group: "B",
+    birth_date: "2002-02-14",
     department: "Quality Control",
     position: "QC Inspector",
     qr_token: "QR_EMP009_J9P34T",
+    supplier_name: "",
     is_active: 1,
     created_at: "2026-08-05 08:00:00",
     updated_at: "2026-08-05 08:00:00",
   },
+
   {
     id: 10,
     employee_code: "EMP010",
+    prefix: "นาย",
     first_name: "ณัฐวุฒิ",
     last_name: "เก่งงาน",
+    gender: "ชาย",
+    nationality: "ไทย",
+    blood_group: "O",
+    birth_date: "1985-08-11",
     department: "Production",
     position: "Production Supervisor",
     qr_token: "QR_EMP010_K8Q56U",
+    supplier_name: "",
     is_active: 0,
     created_at: "2026-08-05 08:30:00",
     updated_at: "2026-08-10 14:20:00",
   },
 ];
 
-const coursesMockup = [
+const coursesMockup: CourseMock[] = [
   {
     id: 1,
     title: "ความปลอดภัยในการทำงาน",
@@ -189,7 +351,7 @@ const coursesMockup = [
   },
 ];
 
-const attendancesMockup = [
+const attendancesMockup: AttendanceMock[] = [
   {
     id: 1,
     course_id: 1,
@@ -262,7 +424,7 @@ const attendancesMockup = [
   },
 ];
 
-const recentTrainings = [
+const recentTrainings: RecentTraining[] = [
   {
     id: 1,
     date: "08 ส.ค. 2026",
@@ -315,7 +477,7 @@ const recentTrainings = [
   },
 ];
 
-const positionMockup = [
+const positionMockup: PositionMock[] = [
   {
     id: 1,
     code: "PM",
@@ -430,7 +592,7 @@ const positionMockup = [
   },
 ];
 
-const courseTrainingData = [
+const courseTrainingData: CourseTrainingDatum[] = [
   {
     id: 1,
     courseId: 1,
@@ -493,15 +655,57 @@ const courseTrainingData = [
   },
 ];
 
-const supplierMockup = [
+const supplierMockup: SupplierMock[] = [
   {
     id: 1,
     supplierNameTH: "บริษัท ลอว์เลนส์ เทค จำกัด",
     supplierNameEN: "LAWLENS TECH Co., Ltd.",
     address:
       "25 อาคารอัลม่า ลิงค์ ห้องเลขที่ 647 ชั้นที่ 17 ซอย ชิดลม ถนนเพลินจิต แขวงปทุมวัน เขตปทุมวัน กรุงเทพมหานคร 10330",
-    status: 'active',
+    status: "active",
   },
+];
+
+const userPermissionMockup: UserPermissionMock[] = [
+  {
+    id: 1,
+    name: "สมชาย ใจดี",
+    username: "somchai",
+    department: "Safety",
+    role: "Admin",
+    status: "active",
+  },
+  {
+    id: 2,
+    name: "วราภรณ์ มั่นคง",
+    username: "waraporn",
+    department: "Human Resource",
+    role: "Viewer",
+    status: "active",
+  },
+  {
+    id: 3,
+    name: "ประเสริฐ ทำงานดี",
+    username: "prasert",
+    department: "Production",
+    role: "Trainer",
+    status: "active",
+  },
+  {
+    id: 4,
+    name: "Supplier A",
+    username: "kittichai",
+    department: "Contractor",
+    role: "Supplier",
+    status: "inactive",
+  },
+];
+
+const roleOptions = [
+  { label: "Admin", value: "Admin" },
+  { label: "Viewer", value: "Viewer" },
+  { label: "Supplier", value: "Supplier" },
+  { label: "Trainer", value: "Trainer" },
 ];
 
 export {
@@ -512,4 +716,6 @@ export {
   positionMockup,
   courseTrainingData,
   supplierMockup,
+  userPermissionMockup,
+  roleOptions,
 };

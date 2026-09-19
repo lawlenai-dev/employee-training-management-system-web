@@ -1,0 +1,219 @@
+import { CheckCircle2, Search } from "lucide-react";
+import type { Key, ReactNode } from "react";
+import { isValidElement } from "react";
+
+export type DataTableCellContext<T> = {
+  value: unknown;
+  row: T;
+  rowIndex: number;
+  column: DataTableColumn<T>;
+};
+
+export type DataTableColumn<T> = {
+  id?: string;
+  key?: string;
+  header?: ReactNode;
+  label?: ReactNode;
+  accessor?: string | ((row: T, rowIndex: number) => unknown);
+  accessorFn?: (row: T, rowIndex: number) => unknown;
+  accessorKey?: string;
+  headerClassName?: string;
+  cellClassName?: string;
+  cell?: (context: DataTableCellContext<T>) => ReactNode;
+};
+
+export type DataTableProps<T> = {
+  columns?: DataTableColumn<T>[];
+  data?: T[];
+  rowKey?: string | ((row: T, rowIndex: number) => Key);
+  actions?: (row: T) => ReactNode;
+  onRowClick?: (row: T) => void;
+  emptyMessage?: ReactNode;
+  minWidth?: string | number;
+};
+
+function getValueByPath(object: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((value, key) => {
+    if (typeof value !== "object" || value === null) return undefined;
+    return (value as Record<string, unknown>)[key];
+  }, object);
+}
+
+export function getCellValue<T>(
+  row: T,
+  column: DataTableColumn<T>,
+  rowIndex: number,
+): unknown {
+  const accessorFn =
+    column.accessorFn ??
+    (typeof column.accessor === "function" ? column.accessor : undefined);
+
+  if (accessorFn) {
+    return accessorFn(row, rowIndex);
+  }
+
+  const accessorKey =
+    column.accessorKey ??
+    (typeof column.accessor === "string" ? column.accessor : undefined) ??
+    column.key;
+
+  if (typeof accessorKey === "string") {
+    return getValueByPath(row, accessorKey);
+  }
+
+  return undefined;
+}
+
+function CellValue<T>({
+  row,
+  column,
+  rowIndex,
+}: {
+  row: T;
+  column: DataTableColumn<T>;
+  rowIndex: number;
+}) {
+  const value = getCellValue(row, column, rowIndex);
+
+  if (typeof column.cell === "function") {
+    return column.cell({
+      value,
+      row,
+      rowIndex,
+      column,
+    });
+  }
+
+  if (column.key === "status" || column.accessor === "status") {
+    const isActive = value === "active";
+
+    return (
+      <span
+        className={`
+          inline-flex items-center gap-1.5
+          rounded-full px-3 py-1.5
+          text-xs font-semibold
+          ${
+            isActive
+              ? "bg-success-50 text-success-600"
+              : "bg-slate-100 text-slate-500"
+          }
+        `}
+      >
+        {isActive && <CheckCircle2 size={14} />}
+        {isActive ? "ใช้งาน" : "ไม่ใช้งาน"}
+      </span>
+    );
+  }
+
+  if (value === null || value === undefined || value === "") return "-";
+  if (isValidElement(value)) return value;
+  if (typeof value === "string" || typeof value === "number") return value;
+
+  return String(value);
+}
+
+function getColumnId<T>(
+  column: DataTableColumn<T>,
+  columnIndex: number,
+): string {
+  return (
+    column.id ??
+    column.accessorKey ??
+    (typeof column.accessor === "string" ? column.accessor : undefined) ??
+    column.key ??
+    `column-${columnIndex}`
+  );
+}
+
+export default function DataTable<T>({
+  columns = [],
+  data = [],
+  rowKey = "id",
+  actions,
+  onRowClick,
+  emptyMessage = "ไม่พบข้อมูล",
+  minWidth = "850px",
+}: DataTableProps<T>) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-left" style={{ minWidth }}>
+        <thead>
+          <tr className="border-b border-border bg-slate-50">
+            {columns.map((column, columnIndex) => (
+              <th
+                key={getColumnId(column, columnIndex)}
+                className={`whitespace-nowrap px-5 py-4 text-xs font-semibold uppercase tracking-wider text-muted ${column.headerClassName ?? ""}`}
+              >
+                {column.header ?? column.label}
+              </th>
+            ))}
+
+            {actions && (
+              <th className="whitespace-nowrap px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted">
+                จัดการ
+              </th>
+            )}
+          </tr>
+        </thead>
+
+        <tbody>
+          {data.length > 0 ? (
+            data.map((row, rowIndex) => {
+              const rawRowKey =
+                typeof rowKey === "function"
+                  ? rowKey(row, rowIndex)
+                  : getValueByPath(row, rowKey);
+              const resolvedRowKey: Key =
+                typeof rawRowKey === "string" || typeof rawRowKey === "number"
+                  ? rawRowKey
+                  : rowIndex;
+
+              return (
+                <tr
+                  key={resolvedRowKey}
+                  onClick={() => onRowClick?.(row)}
+                  className={`border-b border-border transition last:border-b-0 hover:bg-surface-hover ${onRowClick ? "cursor-pointer" : ""}`}
+                >
+                  {columns.map((column, columnIndex) => (
+                    <td
+                      key={getColumnId(column, columnIndex)}
+                      className={`px-5 py-4 text-sm text-body ${column.cellClassName ?? ""}`}
+                    >
+                      <CellValue
+                        row={row}
+                        column={column}
+                        rowIndex={rowIndex}
+                      />
+                    </td>
+                  ))}
+
+                  {actions && (
+                    <td
+                      className="whitespace-nowrap px-5 py-4 text-right"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {actions(row)}
+                    </td>
+                  )}
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td
+                colSpan={columns.length + (actions ? 1 : 0)}
+                className="px-5 py-16 text-center"
+              >
+                <Search size={30} className="mx-auto text-slate-300" />
+                <p className="mt-3 font-semibold text-slate-600">
+                  {emptyMessage}
+                </p>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}

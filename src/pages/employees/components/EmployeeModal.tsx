@@ -1,11 +1,71 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { ImagePlus, Save, Upload, UserPlus, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import Autocomplete from "../../../components/Autocomplete";
 import { Button, Input } from "../../../components/Ui";
 import { positionMockup } from "../../../data";
 
-const EMPTY_FORM = {
+export type EmployeeStatus = "active" | "resigned" | "canceled";
+
+export type EmployeeForm = {
+  employee_code: string;
+  prefix: string;
+  first_name: string;
+  last_name: string;
+  department: string;
+  position: string;
+  birth_date: string;
+  nationality: string;
+  company: string;
+  gender: string;
+  note: string;
+  photo: File | null;
+  photo_url: string;
+  status: EmployeeStatus;
+};
+
+export type EmployeeFormSubmission = EmployeeForm & {
+  calculated_age: number | "";
+};
+
+export type LookupOption = {
+  code: string;
+  name: string;
+};
+
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
+type SelectFieldProps = {
+  label: string;
+  required?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  options?: SelectOption[];
+  disabled?: boolean;
+};
+
+type EmployeeModalProps = {
+  open: boolean;
+  mode?: "create" | "edit";
+  title?: string;
+  description?: string;
+  submitLabel?: string;
+  initialData?: Partial<EmployeeForm> | null;
+  departments?: LookupOption[];
+  positions?: LookupOption[];
+  nationalities?: LookupOption[];
+  companies?: LookupOption[];
+  saving?: boolean;
+  error?: string;
+  onClose: () => void;
+  onSubmit: (form: EmployeeFormSubmission) => void | Promise<void>;
+};
+
+const EMPTY_FORM: EmployeeForm = {
   employee_code: "",
   prefix: "",
   first_name: "",
@@ -40,7 +100,7 @@ const genderOptions = [
   { value: "other", label: "อื่น ๆ" },
 ];
 
-function calculateAge(birthDate) {
+function calculateAge(birthDate: string): number | "" {
   if (!birthDate) {
     return "";
   }
@@ -73,7 +133,7 @@ function SelectField({
   onChange,
   options = [],
   disabled = false,
-}) {
+}: SelectFieldProps) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -110,17 +170,20 @@ function SelectField({
 export default function EmployeeModal({
   open,
   mode = "create",
+  title,
+  description,
+  submitLabel,
   initialData = null,
   departments = [],
-  positions = [],
+  positions = positionMockup as LookupOption[],
   nationalities = [],
   companies = [],
   saving = false,
   error = "",
   onClose,
   onSubmit,
-}) {
-  const [form, setForm] = useState(EMPTY_FORM);
+}: EmployeeModalProps) {
+  const [form, setForm] = useState<EmployeeForm>(EMPTY_FORM);
   const [previewUrl, setPreviewUrl] = useState("");
 
   const isEdit = mode === "edit";
@@ -149,22 +212,12 @@ export default function EmployeeModal({
     };
   }, [previewUrl]);
 
-  if (!open) {
-    return null;
-  }
-
-  const updateField = (field, value) => {
-    setForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  };
   useEffect(() => {
     if (!open) return undefined;
 
     const previousOverflow = document.body.style.overflow;
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !saving) {
         onClose();
       }
@@ -179,7 +232,22 @@ export default function EmployeeModal({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [open, saving, onClose]);
-  const handlePhotoChange = (event) => {
+
+  if (!open) {
+    return null;
+  }
+
+  const updateField = <K extends keyof EmployeeForm>(
+    field: K,
+    value: EmployeeForm[K],
+  ) => {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -211,7 +279,7 @@ export default function EmployeeModal({
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     // Age ใช้แสดงผล ไม่แนะนำให้เก็บลง Database
@@ -284,11 +352,13 @@ export default function EmployeeModal({
                   id="employee-modal-title"
                   className="font-bold text-heading"
                 >
-                  {isEdit ? "แก้ไขข้อมูลพนักงาน" : "เพิ่มข้อมูลพนักงาน"}
+                  {title ??
+                    (isEdit ? "แก้ไขข้อมูลพนักงาน" : "เพิ่มข้อมูลพนักงาน")}
                 </h2>
 
                 <p className="mt-0.5 text-sm text-muted">
-                  กรอกข้อมูลพื้นฐานสำหรับสร้างบัญชีและบัตร QR
+                  {description ??
+                    "กรอกข้อมูลพื้นฐานสำหรับสร้างบัญชีและบัตร QR"}
                 </p>
               </div>
             </div>
@@ -382,7 +452,7 @@ export default function EmployeeModal({
                   label="ตำแหน่ง *"
                   required
                   placeholder="ค้นหาตำแหน่ง"
-                  options={positionMockup}
+                  options={positions}
                   value={selectedPosition}
                   getOptionLabel={(option) => `${option.code} - ${option.name}`}
                   onChange={(option) =>
@@ -439,7 +509,9 @@ export default function EmployeeModal({
                   required
                   value={form.status}
                   options={statusOptions}
-                  onChange={(value) => updateField("status", value)}
+                  onChange={(value) =>
+                    updateField("status", value as EmployeeStatus)
+                  }
                 />
 
                 {/* Gender */}
@@ -631,7 +703,8 @@ export default function EmployeeModal({
                 ) : (
                   <>
                     <Save size={18} />
-                    {isEdit ? "บันทึกการแก้ไข" : "บันทึกพนักงาน"}
+                    {submitLabel ??
+                      (isEdit ? "บันทึกการแก้ไข" : "บันทึกพนักงาน")}
                   </>
                 )}
               </Button>

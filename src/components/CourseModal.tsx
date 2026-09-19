@@ -1,4 +1,11 @@
 import { useEffect } from "react";
+import type {
+  Dispatch,
+  FormEventHandler,
+  MouseEvent,
+  ReactNode,
+  SetStateAction,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   BookOpenCheck,
@@ -12,9 +19,47 @@ import {
   Users,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button, Input } from "./Ui";
 
-const statusConfig = {
+export type CourseStatus = "OPEN" | "DRAFT" | "CLOSED" | "CANCELLED";
+export type CourseModalMode = "create" | "view" | "edit";
+
+export type CourseForm = {
+  title: string;
+  description: string;
+  course_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  instructor: string;
+};
+
+export type Course = CourseForm & {
+  id: string | number;
+  status: CourseStatus;
+  attendance_count?: number;
+};
+
+type StatusConfigItem = {
+  label: string;
+  className: string;
+};
+
+type CourseModalProps = {
+  open: boolean;
+  mode?: CourseModalMode;
+  course?: Course | null;
+  form: CourseForm;
+  setForm: Dispatch<SetStateAction<CourseForm>>;
+  onSubmit: FormEventHandler<HTMLFormElement>;
+  onClose: () => void;
+  onOpenAttendance?: (course: Course) => void;
+  saving?: boolean;
+  error?: string;
+};
+
+const statusConfig: Record<CourseStatus, StatusConfigItem> = {
   OPEN: {
     label: "เปิดใช้งาน",
     className: "bg-success-50 text-success-600",
@@ -33,7 +78,7 @@ const statusConfig = {
   },
 };
 
-function formatThaiDate(date) {
+function formatThaiDate(date?: string) {
   if (!date) return "ไม่ระบุวันที่";
 
   return new Intl.DateTimeFormat("th-TH", {
@@ -43,7 +88,7 @@ function formatThaiDate(date) {
   }).format(new Date(`${date}T00:00:00`));
 }
 
-function formatTime(time) {
+function formatTime(time?: string) {
   if (!time) return "--:--";
   return time.slice(0, 5);
 }
@@ -59,8 +104,8 @@ export default function CourseModal({
   onOpenAttendance,
   saving = false,
   error = "",
-}) {
-  const isCreate = mode === "create";
+}: CourseModalProps) {
+  const isCreate = mode === "create" || mode === "edit";
   const isView = mode === "view";
 
   useEffect(() => {
@@ -68,7 +113,7 @@ export default function CourseModal({
 
     const previousOverflow = document.body.style.overflow;
 
-    const handleEscape = (event) => {
+    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !saving) {
         onClose();
       }
@@ -85,21 +130,25 @@ export default function CourseModal({
 
   if (!open) return null;
 
-  const updateForm = (field, value) => {
+  const updateForm = <K extends keyof CourseForm>(
+    field: K,
+    value: CourseForm[K],
+  ) => {
     setForm((current) => ({
       ...current,
       [field]: value,
     }));
   };
 
-  const handleBackdropClick = (event) => {
+  const handleBackdropClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget && !saving) {
       onClose();
     }
   };
 
-  const courseStatus =
-    statusConfig[course?.status] ?? statusConfig.CLOSED;
+  const courseStatus = course?.status
+    ? statusConfig[course.status]
+    : statusConfig.CLOSED;
 
   return createPortal(
     <div
@@ -129,11 +178,7 @@ export default function CourseModal({
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border bg-gradient-to-r from-brand-50 to-white px-5 py-4 sm:px-6 sm:py-5">
           <div className="flex items-start gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-md shadow-brand-900/15">
-              {isCreate ? (
-                <Plus size={20} />
-              ) : (
-                <Eye size={20} />
-              )}
+              {isCreate ? <Plus size={20} /> : <Eye size={20} />}
             </span>
 
             <div>
@@ -141,9 +186,7 @@ export default function CourseModal({
                 id="course-modal-title"
                 className="text-lg font-bold text-heading sm:text-xl"
               >
-                {isCreate
-                  ? "สร้างหลักสูตรใหม่"
-                  : "รายละเอียดหลักสูตร"}
+                {isCreate ? "สร้างหลักสูตรใหม่" : "รายละเอียดหลักสูตร"}
               </h2>
 
               <p className="mt-1 text-sm text-muted">
@@ -181,10 +224,7 @@ export default function CourseModal({
           )}
 
           {isView && (
-            <CourseDetail
-              course={course}
-              courseStatus={courseStatus}
-            />
+            <CourseDetail course={course} courseStatus={courseStatus} />
           )}
         </div>
 
@@ -235,7 +275,7 @@ export default function CourseModal({
               {onOpenAttendance && (
                 <Button
                   type="button"
-                  onClick={() => onOpenAttendance(course)}
+                  onClick={() => course && onOpenAttendance(course)}
                   className="w-full sm:w-auto"
                 >
                   <Users size={18} />
@@ -251,12 +291,22 @@ export default function CourseModal({
   );
 }
 
+type CreateCourseFormProps = {
+  form: CourseForm;
+  updateForm: <K extends keyof CourseForm>(
+    field: K,
+    value: CourseForm[K],
+  ) => void;
+  onSubmit: FormEventHandler<HTMLFormElement>;
+  error: string;
+};
+
 function CreateCourseForm({
   form,
   updateForm,
   onSubmit,
   error,
-}) {
+}: CreateCourseFormProps) {
   return (
     <form
       id="course-form"
@@ -270,9 +320,7 @@ function CreateCourseForm({
           autoFocus
           placeholder="เช่น การปฐมนิเทศความปลอดภัย"
           value={form.title}
-          onChange={(event) =>
-            updateForm("title", event.target.value)
-          }
+          onChange={(event) => updateForm("title", event.target.value)}
         />
       </div>
 
@@ -281,18 +329,14 @@ function CreateCourseForm({
         type="date"
         required
         value={form.course_date}
-        onChange={(event) =>
-          updateForm("course_date", event.target.value)
-        }
+        onChange={(event) => updateForm("course_date", event.target.value)}
       />
 
       <Input
         label="สถานที่"
         placeholder="เช่น ห้องประชุมชั้น 2"
         value={form.location}
-        onChange={(event) =>
-          updateForm("location", event.target.value)
-        }
+        onChange={(event) => updateForm("location", event.target.value)}
       />
 
       <div className="grid grid-cols-2 gap-3">
@@ -300,18 +344,14 @@ function CreateCourseForm({
           label="เวลาเริ่ม"
           type="time"
           value={form.start_time}
-          onChange={(event) =>
-            updateForm("start_time", event.target.value)
-          }
+          onChange={(event) => updateForm("start_time", event.target.value)}
         />
 
         <Input
           label="เวลาสิ้นสุด"
           type="time"
           value={form.end_time}
-          onChange={(event) =>
-            updateForm("end_time", event.target.value)
-          }
+          onChange={(event) => updateForm("end_time", event.target.value)}
         />
       </div>
 
@@ -319,9 +359,7 @@ function CreateCourseForm({
         label="วิทยากร"
         placeholder="ชื่อวิทยากรหรือหน่วยงาน"
         value={form.instructor}
-        onChange={(event) =>
-          updateForm("instructor", event.target.value)
-        }
+        onChange={(event) => updateForm("instructor", event.target.value)}
       />
 
       <label className="block md:col-span-2">
@@ -333,9 +371,7 @@ function CreateCourseForm({
           rows={4}
           placeholder="ระบุหัวข้อ วัตถุประสงค์ หรือรายละเอียดเพิ่มเติม..."
           value={form.description}
-          onChange={(event) =>
-            updateForm("description", event.target.value)
-          }
+          onChange={(event) => updateForm("description", event.target.value)}
           className="
             w-full resize-none rounded-control
             border border-slate-300 bg-white
@@ -364,7 +400,13 @@ function CreateCourseForm({
 /* View mode                                          */
 /* -------------------------------------------------- */
 
-function CourseDetail({ course, courseStatus }) {
+function CourseDetail({
+  course,
+  courseStatus,
+}: {
+  course: Course | null;
+  courseStatus: StatusConfigItem;
+}) {
   if (!course) {
     return (
       <div className="p-10 text-center text-sm text-muted">
@@ -456,7 +498,15 @@ function CourseDetail({ course, courseStatus }) {
   );
 }
 
-function DetailItem({ icon: Icon, label, value }) {
+function DetailItem({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: ReactNode;
+}) {
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-border bg-white p-4">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
@@ -464,9 +514,7 @@ function DetailItem({ icon: Icon, label, value }) {
       </span>
 
       <div className="min-w-0">
-        <p className="text-xs text-muted">
-          {label}
-        </p>
+        <p className="text-xs text-muted">{label}</p>
 
         <p className="mt-1 break-words text-sm font-semibold text-heading">
           {value}

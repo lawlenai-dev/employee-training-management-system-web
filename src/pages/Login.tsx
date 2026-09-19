@@ -1,64 +1,76 @@
-import { Check, Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Logo from "../assets/logo.png";
-import { api } from "../api";
+import { Navigate, useNavigate } from "react-router-dom";
+import {
+  demoAccounts,
+  getHomePath,
+  useAuth,
+} from "../auth/AuthContext";
+
+type LoginForm = {
+  username: string;
+  password: string;
+};
 
 export default function Login() {
   const navigate = useNavigate();
+  const { user, login } = useAuth();
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<LoginForm>({
     username: "",
     password: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (event) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
+    const field = name as keyof LoginForm;
 
     setForm((current) => ({
       ...current,
-      [name]: value,
+      [field]: value,
     }));
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
 
-    // if (!form.username.trim() || !form.password.trim()) {
-    //   setError("กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน");
-    //   return;
-    // }
+    if (!form.username.trim() || !form.password.trim()) {
+      setError("กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน");
+      return;
+    }
 
     try {
-      //   setLoading(true);
+      setLoading(true);
+      await Promise.resolve();
 
-      //   const response = await api("/auth/login", {
-      //     method: "POST",
-      //     body: JSON.stringify({
-      //       username: form.username.trim(),
-      //       password: form.password,
-      //     }),
-      //   });
+      const result = login(form.username, form.password);
 
-      //   if (remember) {
-      //     localStorage.setItem("access_token", response.data.token);
-      //   } else {
-      //     sessionStorage.setItem("access_token", response.data.token);
-      //   }
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
 
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err.message || "ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง");
+      navigate(getHomePath(result.user), { replace: true });
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง",
+      );
     } finally {
       setLoading(false);
     }
   };
+
+  if (user) {
+    return <Navigate to={getHomePath(user)} replace />;
+  }
 
   return (
     <div
@@ -295,6 +307,39 @@ export default function Login() {
               )}
             </button>
           </form>
+
+          <div className="mt-7 border-t border-slate-200 pt-5">
+            <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+              Demo Accounts
+            </p>
+            <p className="mt-1 text-center text-xs text-slate-500">
+              เลือกบัญชีเพื่อเติม Username และ Password อัตโนมัติ
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {demoAccounts.map((account) => (
+                <button
+                  key={account.id}
+                  type="button"
+                  onClick={() => {
+                    setForm({
+                      username: account.username,
+                      password: account.password,
+                    });
+                    setError("");
+                  }}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50"
+                >
+                  <span className="block text-sm font-bold capitalize text-slate-700">
+                    {account.role}
+                  </span>
+                  <span className="mt-0.5 block font-mono text-xs text-slate-500">
+                    {account.username} / {account.password}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Footer */}
           <div className="mt-6 text-center">

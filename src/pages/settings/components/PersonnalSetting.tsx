@@ -1,7 +1,8 @@
 import { createPortal } from "react-dom";
+import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
-    CheckCircle2,
+  CheckCircle2,
   Droplets,
   Globe2,
   Pencil,
@@ -11,13 +12,49 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import DataTable from "../../../components/DataTable";
 import { Button } from "../../../components/Ui";
 
-const settingConfig = {
+type SettingKey = "nationalities" | "bloodTypes" | "genders" | "prefixes";
+type Status = "active" | "inactive";
+
+type PersonalForm = {
+  code: string;
+  nameTh: string;
+  nameEn: string;
+  status: Status;
+};
+
+type PersonalRow = PersonalForm & {
+  id: number;
+};
+
+type PersonalData = Record<SettingKey, PersonalRow[]>;
+
+type SettingConfigItem = {
+  title: string;
+  description: string;
+  addLabel: string;
+  icon: LucideIcon;
+};
+
+type TableCellContext = {
+  value: unknown;
+};
+
+type TableColumn = {
+  key: string;
+  label: string;
+  accessor: string | ((row: PersonalRow, rowIndex: number) => ReactNode);
+  cellClassName?: string;
+  cell?: (context: TableCellContext) => ReactNode;
+};
+
+const settingConfig: Record<SettingKey, SettingConfigItem> = {
   nationalities: {
-    title: "สัญชาติ", 
+    title: "สัญชาติ",
     description: "จัดการรายการสัญชาติของพนักงาน",
     addLabel: "เพิ่มสัญชาติ",
     icon: Globe2,
@@ -28,12 +65,12 @@ const settingConfig = {
     addLabel: "เพิ่มกรุ๊ปเลือด",
     icon: Droplets,
   },
-genders: {
-  title: "เพศ",
-  description: "จัดการตัวเลือกเพศของพนักงาน",
-  addLabel: "เพิ่มเพศ",
-  icon: UsersRound,
-},
+  genders: {
+    title: "เพศ",
+    description: "จัดการตัวเลือกเพศของพนักงาน",
+    addLabel: "เพิ่มเพศ",
+    icon: UsersRound,
+  },
   prefixes: {
     title: "คำนำหน้าชื่อ",
     description: "จัดการคำนำหน้าชื่อของพนักงาน",
@@ -42,7 +79,7 @@ genders: {
   },
 };
 
-const initialData = {
+const initialData: PersonalData = {
   nationalities: [
     {
       id: 1,
@@ -147,14 +184,14 @@ const initialData = {
   ],
 };
 
-const EMPTY_FORM = {
+const EMPTY_FORM: PersonalForm = {
   code: "",
   nameTh: "",
   nameEn: "",
   status: "active",
 };
 
-function StatusBadge({ value }) {
+function StatusBadge({ value }: { value: unknown }) {
   const isActive = value === "active";
 
   return (
@@ -175,6 +212,15 @@ function StatusBadge({ value }) {
   );
 }
 
+type PersonalSettingModalProps = {
+  open: boolean;
+  mode: "create" | "edit";
+  setting: SettingConfigItem;
+  initialValue: PersonalRow | null;
+  onClose: () => void;
+  onSave: (form: PersonalForm) => void;
+};
+
 function PersonalSettingModal({
   open,
   mode,
@@ -182,8 +228,8 @@ function PersonalSettingModal({
   initialValue,
   onClose,
   onSave,
-}) {
-  const [form, setForm] = useState(EMPTY_FORM);
+}: PersonalSettingModalProps) {
+  const [form, setForm] = useState<PersonalForm>(EMPTY_FORM);
   const isEdit = mode === "edit";
 
   useEffect(() => {
@@ -200,7 +246,7 @@ function PersonalSettingModal({
 
     const previousOverflow = document.body.style.overflow;
 
-    const handleEscape = (event) => {
+    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
       }
@@ -217,14 +263,17 @@ function PersonalSettingModal({
 
   if (!open) return null;
 
-  const updateField = (field, value) => {
+  const updateField = <K extends keyof PersonalForm>(
+    field: K,
+    value: PersonalForm[K],
+  ) => {
     setForm((current) => ({
       ...current,
       [field]: value,
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     onSave({
@@ -234,6 +283,8 @@ function PersonalSettingModal({
       nameEn: form.nameEn.trim(),
     });
   };
+
+  const ModalIcon = setting.icon;
 
   return createPortal(
     <div
@@ -274,7 +325,7 @@ function PersonalSettingModal({
                   rounded-xl bg-brand-600 text-white
                 "
               >
-                <setting.icon size={20} />
+                <ModalIcon size={20} />
               </span>
 
               <div>
@@ -338,7 +389,7 @@ function PersonalSettingModal({
                   required
                   value={form.status}
                   onChange={(event) =>
-                    updateField("status", event.target.value)
+                    updateField("status", event.target.value as Status)
                   }
                   className="
                     h-11 w-full rounded-control border border-border
@@ -418,11 +469,16 @@ function PersonalSettingModal({
 }
 
 export default function PersonalSetting() {
-  const [activeSetting, setActiveSetting] = useState("nationalities");
-  const [data, setData] = useState(initialData);
+  const [activeSetting, setActiveSetting] =
+    useState<SettingKey>("nationalities");
+  const [data, setData] = useState<PersonalData>(initialData);
   const [search, setSearch] = useState("");
 
-  const [modal, setModal] = useState({
+  const [modal, setModal] = useState<{
+    open: boolean;
+    mode: "create" | "edit";
+    row: PersonalRow | null;
+  }>({
     open: false,
     mode: "create",
     row: null,
@@ -432,7 +488,7 @@ export default function PersonalSetting() {
   const CurrentIcon = currentSetting.icon;
   const currentRows = data[activeSetting] ?? [];
 
-  const columns = useMemo(
+  const columns = useMemo<TableColumn[]>(
     () => [
       {
         key: "rowNumber",
@@ -446,7 +502,7 @@ export default function PersonalSetting() {
         accessor: "code",
         cell: ({ value }) => (
           <span className="font-mono font-semibold text-brand-600">
-            {value}
+            {String(value ?? "")}
           </span>
         ),
       },
@@ -455,7 +511,9 @@ export default function PersonalSetting() {
         label: "ชื่อภาษาไทย",
         accessor: "nameTh",
         cell: ({ value }) => (
-          <span className="font-semibold text-heading">{value}</span>
+          <span className="font-semibold text-heading">
+            {String(value ?? "")}
+          </span>
         ),
       },
       {
@@ -485,7 +543,7 @@ export default function PersonalSetting() {
     );
   }, [currentRows, search]);
 
-  const handleSelectSetting = (key) => {
+  const handleSelectSetting = (key: SettingKey) => {
     setActiveSetting(key);
     setSearch("");
   };
@@ -498,7 +556,7 @@ export default function PersonalSetting() {
     });
   };
 
-  const handleEdit = (row) => {
+  const handleEdit = (row: PersonalRow) => {
     setModal({
       open: true,
       mode: "edit",
@@ -514,7 +572,9 @@ export default function PersonalSetting() {
     });
   };
 
-  const handleSave = (form) => {
+  const handleSave = (form: PersonalForm) => {
+    const editingRowId = modal.row?.id;
+
     setData((current) => {
       const rows = current[activeSetting] ?? [];
 
@@ -522,7 +582,7 @@ export default function PersonalSetting() {
         return {
           ...current,
           [activeSetting]: rows.map((row) =>
-            row.id === modal.row.id
+            row.id === editingRowId
               ? {
                   ...row,
                   ...form,
@@ -556,7 +616,9 @@ export default function PersonalSetting() {
     <section className="space-y-6">
       {/* เมนูประเภทข้อมูล */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {Object.entries(settingConfig).map(([key, setting]) => {
+        {(
+          Object.entries(settingConfig) as [SettingKey, SettingConfigItem][]
+        ).map(([key, setting]) => {
           const Icon = setting.icon;
           const isActive = key === activeSetting;
           const total = data[key]?.length ?? 0;
@@ -669,7 +731,7 @@ export default function PersonalSetting() {
           data={filteredRows}
           rowKey="id"
           emptyMessage={`ไม่พบข้อมูล${currentSetting.title}`}
-          actions={(row) => (
+          actions={(row: PersonalRow) => (
             <button
               type="button"
               title="แก้ไข"

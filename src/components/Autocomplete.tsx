@@ -1,26 +1,59 @@
 import { ChevronDown, Search } from "lucide-react";
 import { createPortal } from "react-dom";
+import type { Key, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export default function Autocomplete({
+type DropdownPosition = {
+  top: number;
+  left: number;
+  width: number;
+};
+
+export type AutocompleteProps<T extends object> = {
+  label?: ReactNode;
+  required?: boolean;
+  placeholder?: string;
+  options?: readonly T[];
+  value?: T | null;
+  onChange: (option: T | null) => void;
+  getOptionLabel?: (option: T) => string;
+  getOptionKey?: (option: T, index: number) => Key;
+  disabled?: boolean;
+};
+
+function defaultOptionLabel<T extends object>(option: T): string {
+  const record = option as Record<string, unknown>;
+  return String(record.name ?? record.label ?? "");
+}
+
+function defaultOptionKey<T extends object>(option: T, index: number): Key {
+  const record = option as Record<string, unknown>;
+  const key = record.id ?? record.code ?? record.value ?? record.name;
+  return typeof key === "string" || typeof key === "number" ? key : index;
+}
+
+export default function Autocomplete<T extends object>({
   label,
+  required = false,
   placeholder = "ค้นหา...",
   options = [],
   value,
   onChange,
-  getOptionLabel = (option) => option?.name || "",
-}) {
+  getOptionLabel = defaultOptionLabel,
+  getOptionKey = defaultOptionKey,
+  disabled = false,
+}: AutocompleteProps<T>) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [position, setPosition] = useState(null);
+  const [position, setPosition] = useState<DropdownPosition | null>(null);
 
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const filteredOptions = useMemo(() => {
     const keyword = search.toLowerCase();
 
     return options.filter((option) =>
-      getOptionLabel(option).toLowerCase().includes(keyword)
+      getOptionLabel(option).toLowerCase().includes(keyword),
     );
   }, [options, search, getOptionLabel]);
 
@@ -55,14 +88,16 @@ export default function Autocomplete({
       {label && (
         <label className="mb-1.5 block text-sm font-medium text-heading">
           {label}
+          {required && <span className="ml-1 text-danger-600">*</span>}
         </label>
       )}
 
       <button
         type="button"
+        disabled={disabled}
         onClick={() => {
           updatePosition();
-          setOpen((prev) => !prev);
+          setOpen((previous) => !previous);
         }}
         className="flex w-full items-center justify-between rounded-control border border-border bg-white px-3 py-2.5 text-left text-sm outline-none transition hover:border-brand-400 focus:border-brand-500"
       >
@@ -104,24 +139,31 @@ export default function Autocomplete({
             </div>
 
             <div className="max-h-72 overflow-y-auto overscroll-contain p-1">
-              {filteredOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => {
-                    onChange(option);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
-                    value?.id === option.id
-                      ? "bg-brand-50 text-brand-700"
-                      : "text-heading hover:bg-brand-50"
-                  }`}
-                >
-                  {getOptionLabel(option)}
-                </button>
-              ))}
+              {filteredOptions.map((option, optionIndex) => {
+                const optionKey = getOptionKey(option, optionIndex);
+                const selectedKey = value
+                  ? getOptionKey(value, optionIndex)
+                  : undefined;
+
+                return (
+                  <button
+                    key={optionKey}
+                    type="button"
+                    onClick={() => {
+                      onChange(option);
+                      setOpen(false);
+                      setSearch("");
+                    }}
+                    className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+                      selectedKey === optionKey
+                        ? "bg-brand-50 text-brand-700"
+                        : "text-heading hover:bg-brand-50"
+                    }`}
+                  >
+                    {getOptionLabel(option)}
+                  </button>
+                );
+              })}
 
               {filteredOptions.length === 0 && (
                 <div className="px-3 py-4 text-center text-sm text-muted">
@@ -130,7 +172,7 @@ export default function Autocomplete({
               )}
             </div>
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   );

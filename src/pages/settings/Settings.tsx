@@ -6,8 +6,6 @@ import {
   Plus,
   Search,
   Settings as SettingsIcon,
-  Shapes,
-  Tags,
   Trash2,
   UsersRound,
 } from "lucide-react";
@@ -15,233 +13,36 @@ import { useMemo, useState } from "react";
 import HeroCover from "../../components/HeroCover";
 import { Button } from "../../components/Ui";
 import DataTable from "../../components/DataTable";
-import { positionMockup, supplierMockup } from "../../data";
 import PersonalSetting from "./components/PersonnalSetting";
-/* ---------------- Mockup data ---------------- */
+import SettingFormModal from "./modals/SettingFormModal";
+import type {
+  SettingDefinition,
+  SettingMenuKey,
+  SettingRow,
+  SettingRowsByMenu,
+} from "./settings.types";
+import { settingsConfig } from "./components/settingsConfig";
 
-const settingsConfig = {
-  users: {
-    title: "User & Permission",
-    thaiTitle: "ผู้ใช้งานและสิทธิ์",
-    description: "จัดการบัญชีผู้ใช้งาน บทบาท และสิทธิ์ในการเข้าถึงระบบ",
-    addLabel: "เพิ่มผู้ใช้งาน",
-    icon: UsersRound,
+type ActiveMenuKey = SettingMenuKey | "personal";
 
-    columns: [
-      { key: "name", label: "ชื่อผู้ใช้งาน" },
-      { key: "username", label: "Username" },
-      { key: "department", label: "แผนก" },
-      { key: "role", label: "สิทธิ์" },
-      { key: "status", label: "สถานะ" },
-    ],
-
-    rows: [
-      {
-        id: 1,
-        name: "สมชาย ใจดี",
-        username: "somchai",
-        department: "Safety",
-        role: "Admin",
-        status: "active",
-      },
-      {
-        id: 2,
-        name: "วราภรณ์ มั่นคง",
-        username: "waraporn",
-        department: "Human Resource",
-        role: "HR",
-        status: "active",
-      },
-      {
-        id: 3,
-        name: "ประเสริฐ ทำงานดี",
-        username: "prasert",
-        department: "Production",
-        role: "Trainer",
-        status: "active",
-      },
-      {
-        id: 4,
-        name: "กิตติชัย ปลอดภัย",
-        username: "kittichai",
-        department: "Contractor",
-        role: "Viewer",
-        status: "inactive",
-      },
-    ],
-  },
-  positions: {
-    title: "Positions",
-    thaiTitle: "ตำแหน่ง",
-    description: "ตำแหน่งของพนักงาน",
-    addLabel: "เพิ่มตำแหน่ง",
-    icon: Shapes,
-
-    columns: [
-      { key: "code", label: "รหัส" },
-      { key: "name", label: "ชื่อตำแหน่ง" },
-      { key: "description", label: "รายละเอียด" },
-      { key: "status", label: "สถานะ" },
-    ],
-
-    rows: positionMockup,
-  },
-  suppliers: {
-    title: "Suppliers",
-    thaiTitle: "บริษัท",
-    description: "รายชื่อบริษัท",
-    addLabel: "เพิ่มรายชื่อบริษัท",
-    icon: Shapes,
-
-    columns: [
-      {
-        key: "rowNumber",
-        label: "ลำดับ",
-        accessor: (_row, rowIndex) => rowIndex + 1,
-        cellClassName: "w-20 font-semibold text-muted",
-      },
-      {
-        key: "supplierNameTH",
-        label: "ชื่อบริษัท (ไทย)",
-        accessor: "supplierNameTH",
-      },
-      {
-        key: "supplierNameEN",
-        label: "ชื่อบริษัท (อังกฤษ)",
-        accessor: "supplierNameEN",
-      },
-      {
-        key: "address",
-        label: "ที่อยู่",
-        accessor: "address",
-      },
-      {
-        key: "status",
-        label: "สถานะ",
-        accessor: "status",
-      },
-    ],
-
-    rows: supplierMockup,
-  },
-  categories: {
-    title: "Category",
-    thaiTitle: "หมวดหมู่หลักสูตร",
-    description: "กำหนดหมวดหมู่สำหรับจัดกลุ่มหลักสูตรอบรม",
-    addLabel: "เพิ่มหมวดหมู่",
-    icon: Tags,
-
-    columns: [
-      { key: "code", label: "รหัส" },
-      { key: "name", label: "ชื่อหมวดหมู่" },
-      { key: "description", label: "รายละเอียด" },
-      { key: "courseCount", label: "จำนวนหลักสูตร" },
-      { key: "status", label: "สถานะ" },
-    ],
-
-    rows: [
-      {
-        id: 1,
-        code: "SAFETY",
-        name: "ความปลอดภัย",
-        description: "หลักสูตรอบรมด้านความปลอดภัยในการทำงาน",
-        courseCount: 12,
-        status: "active",
-      },
-      {
-        id: 2,
-        code: "TECHNICAL",
-        name: "ทักษะเฉพาะทาง",
-        description: "หลักสูตรอบรมด้านเทคนิคและการปฏิบัติงาน",
-        courseCount: 8,
-        status: "active",
-      },
-      {
-        id: 3,
-        code: "MANAGEMENT",
-        name: "การบริหารจัดการ",
-        description: "หลักสูตรสำหรับหัวหน้างานและผู้บริหาร",
-        courseCount: 5,
-        status: "active",
-      },
-      {
-        id: 4,
-        code: "GENERAL",
-        name: "ความรู้ทั่วไป",
-        description: "หลักสูตรทั่วไปสำหรับพนักงาน",
-        courseCount: 3,
-        status: "inactive",
-      },
-    ],
-  },
-
-  types: {
-    title: "Type",
-    thaiTitle: "ประเภทหลักสูตร",
-    description: "กำหนดรูปแบบและประเภทของการจัดอบรม",
-    addLabel: "เพิ่มประเภท",
-    icon: Shapes,
-
-    columns: [
-      { key: "code", label: "รหัส" },
-      { key: "name", label: "ชื่อประเภท" },
-      { key: "category", label: "หมวดหมู่" },
-      { key: "description", label: "รายละเอียด" },
-      { key: "status", label: "สถานะ" },
-    ],
-
-    rows: [
-      {
-        id: 1,
-        code: "INTERNAL",
-        name: "อบรมภายใน",
-        category: "ความปลอดภัย",
-        description: "จัดอบรมโดยวิทยากรภายในบริษัท",
-        status: "active",
-      },
-      {
-        id: 2,
-        code: "EXTERNAL",
-        name: "อบรมภายนอก",
-        category: "ทักษะเฉพาะทาง",
-        description: "ส่งพนักงานเข้าอบรมกับหน่วยงานภายนอก",
-        status: "active",
-      },
-      {
-        id: 3,
-        code: "ONLINE",
-        name: "Online Training",
-        category: "ความรู้ทั่วไป",
-        description: "เรียนผ่านระบบออนไลน์",
-        status: "active",
-      },
-      {
-        id: 4,
-        code: "ONSITE",
-        name: "On-site Training",
-        category: "ความปลอดภัย",
-        description: "จัดอบรมภายในพื้นที่ปฏิบัติงาน",
-        status: "inactive",
-      },
-    ],
-  },
-};
-
-const personalSetting = {
-  title: "Personal",
-  thaiTitle: "ส่วนข้อมูลส่วนบุคคล",
-  description: "จัดการข้อมูลส่วนบุคคลของพนักงาน",
-  addLabel: "เพิ่มข้อมูล",
-  icon: UsersRound,
-};
+const createInitialRows = (): SettingRowsByMenu => ({
+  users: [...settingsConfig.users.rows],
+  positions: [...settingsConfig.positions.rows],
+  suppliers: [...settingsConfig.suppliers.rows],
+  categories: [...settingsConfig.categories.rows],
+  types: [...settingsConfig.types.rows],
+});
 /* ---------------- Component ---------------- */
 
 export default function Settings() {
-  const [activeMenu, setActiveMenu] = useState("users");
+  const [activeMenu, setActiveMenu] = useState<ActiveMenuKey>("users");
   const [search, setSearch] = useState("");
+  const [rowsByMenu, setRowsByMenu] =
+    useState<SettingRowsByMenu>(createInitialRows);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const currentSetting =
-    activeMenu === "personal" ? personalSetting : settingsConfig[activeMenu];
+    activeMenu === "personal" ? null : settingsConfig[activeMenu];
   const CurrentIcon = currentSetting?.icon ?? SettingsIcon;
 
   const filteredRows = useMemo(() => {
@@ -251,7 +52,7 @@ export default function Settings() {
       return [];
     }
 
-    const rows = currentSetting?.rows ?? [];
+    const rows = rowsByMenu[activeMenu];
 
     if (!keyword) {
       return rows;
@@ -262,11 +63,44 @@ export default function Settings() {
         String(value).toLowerCase().includes(keyword),
       ),
     );
-  }, [activeMenu, currentSetting, search]);
+  }, [activeMenu, rowsByMenu, search]);
 
-  const handleSelectMenu = (menuKey) => {
+  const handleSelectMenu = (menuKey: ActiveMenuKey) => {
     setActiveMenu(menuKey);
     setSearch("");
+    setIsAddModalOpen(false);
+  };
+
+  const handleAdd = () => {
+    if (activeMenu !== "personal") {
+      setIsAddModalOpen(true);
+    }
+  };
+
+  const handleSave = (values: Record<string, unknown>) => {
+    if (activeMenu === "personal") return;
+
+    const menuKey = activeMenu;
+    const newRow: SettingRow = {
+      id: `${menuKey}-${Date.now()}`,
+      ...values,
+    };
+
+    setRowsByMenu((previousRows) => ({
+      ...previousRows,
+      [menuKey]: [...previousRows[menuKey], newRow],
+    }));
+    setIsAddModalOpen(false);
+  };
+
+  const handleEdit = (row: SettingRow) => {
+    // TODO: เชื่อมต่อ modal แก้ไขข้อมูล
+    console.info("Edit setting row", row);
+  };
+
+  const handleDelete = (row: SettingRow) => {
+    // TODO: เชื่อมต่อขั้นตอนยืนยันและลบข้อมูล
+    console.info("Delete setting row", row);
   };
 
   const tableColumns = useMemo(
@@ -280,7 +114,7 @@ export default function Settings() {
 
         cell:
           column.cell ??
-          (({ value }) => (
+          (({ value }: { value: unknown }) => (
             <CellValue column={column.key} value={value} />
           )),
       })),
@@ -362,7 +196,12 @@ export default function Settings() {
 
                 <ChevronRight size={17} className="hidden lg:block" />
               </button>
-              {Object.entries(settingsConfig).map(([menuKey, menu]) => {
+              {(
+                Object.entries(settingsConfig) as [
+                  SettingMenuKey,
+                  SettingDefinition,
+                ][]
+              ).map(([menuKey, menu]) => {
                 const MenuIcon = menu.icon;
                 const isActive = activeMenu === menuKey;
 
@@ -415,7 +254,7 @@ export default function Settings() {
             </nav>
           </aside>
 
-          {/* พื้นที่ข้อมูล */}
+          {/* display data เด้อ */}
           <main className="min-w-0">
             {activeMenu === "personal" ? (
               <PersonalSetting />
@@ -423,49 +262,53 @@ export default function Settings() {
               <div className="overflow-hidden rounded-card border border-border bg-surface shadow-card">
                 {/* Header */}
                 <div className="border-b border-border px-5 py-5 sm:px-6">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                    <CurrentIcon size={22} />
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                        <CurrentIcon size={22} />
+                      </div>
+
+                      <div>
+                        <h1 className="text-xl font-bold text-heading">
+                          {currentSetting?.thaiTitle}
+                        </h1>
+
+                        <p className="mt-1 text-sm text-muted">
+                          {currentSetting?.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={handleAdd}
+                      className="w-full xl:w-auto"
+                    >
+                      <Plus size={18} />
+                      {currentSetting?.addLabel}
+                    </Button>
                   </div>
 
-                  <div>
-                    <h1 className="text-xl font-bold text-heading">
-                      {currentSetting?.thaiTitle}
-                    </h1>
+                  {/* Search */}
+                  <div className="relative mt-5 max-w-md">
+                    <Search
+                      size={18}
+                      className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
 
-                    <p className="mt-1 text-sm text-muted">
-                      {currentSetting?.description}
-                    </p>
-                  </div>
-                </div>
-
-                <Button className="w-full xl:w-auto">
-                  <Plus size={18} />
-                  {currentSetting?.addLabel}
-                </Button>
-              </div>
-
-              {/* Search */}
-              <div className="relative mt-5 max-w-md">
-                <Search
-                  size={18}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder={`ค้นหา${currentSetting?.thaiTitle}...`}
-                  className="
+                    <input
+                      type="search"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder={`ค้นหา${currentSetting?.thaiTitle}...`}
+                      className="
                     h-11 w-full rounded-control border border-border
                     bg-white pl-10 pr-4 text-sm text-body
                     outline-none transition placeholder:text-placeholder
                     focus:border-brand-500 focus:ring-4 focus:ring-brand-100
                   "
-                />
-              </div>
+                    />
+                  </div>
                 </div>
 
                 <DataTable
@@ -473,9 +316,9 @@ export default function Settings() {
                   data={filteredRows}
                   rowKey="id"
                   emptyMessage="ไม่พบข้อมูล"
-                  actions={(row) => (
+                  actions={(row: SettingRow) => (
                     <div className="inline-flex items-center gap-1">
-                  {/* {activeMenu === "users" && (
+                      {/* {activeMenu === "users" && (
                     <button
                       type="button"
                       title="กำหนดสิทธิ์"
@@ -489,29 +332,29 @@ export default function Settings() {
                     </button>
                   )} */}
 
-                  <button
-                    type="button"
-                    title="แก้ไข"
-                    onClick={() => handleEdit(row)}
-                    className="
+                      <button
+                        type="button"
+                        title="แก้ไข"
+                        onClick={() => handleEdit(row)}
+                        className="
           rounded-lg p-2 text-brand-600
           transition hover:bg-brand-50
         "
-                  >
-                    <Pencil size={17} />
-                  </button>
+                      >
+                        <Pencil size={17} />
+                      </button>
 
-                  <button
-                    type="button"
-                    title="ลบ"
-                    onClick={() => handleDelete(row)}
-                    className="
+                      <button
+                        type="button"
+                        title="ลบ"
+                        onClick={() => handleDelete(row)}
+                        className="
           rounded-lg p-2 text-danger-600
           transition hover:bg-danger-50
         "
-                  >
-                    <Trash2 size={17} />
-                  </button>
+                      >
+                        <Trash2 size={17} />
+                      </button>
                     </div>
                   )}
                 />
@@ -529,13 +372,27 @@ export default function Settings() {
           </main>
         </div>
       </section>
+
+      {activeMenu !== "personal" && (
+        <SettingFormModal
+          open={isAddModalOpen}
+          setting={settingsConfig[activeMenu]}
+          onClose={() => setIsAddModalOpen(false)}
+          onSave={handleSave}
+        />
+      )}
     </>
   );
 }
 
 /* ---------------- Cell renderer ---------------- */
 
-function CellValue({ column, value }) {
+type CellValueProps = {
+  column: string;
+  value: unknown;
+};
+
+function CellValue({ column, value }: CellValueProps) {
   if (column === "status") {
     const isActive = value === "active";
 
@@ -558,7 +415,7 @@ function CellValue({ column, value }) {
   }
 
   if (column === "role") {
-    const roleColors = {
+    const roleColors: Record<string, string> = {
       Admin: "bg-brand-50 text-brand-700",
       HR: "bg-purple-50 text-purple-700",
       Trainer: "bg-accent-50 text-accent-700",
@@ -569,27 +426,31 @@ function CellValue({ column, value }) {
       <span
         className={`
           rounded-full px-3 py-1.5 text-xs font-semibold
-          ${roleColors[value] ?? roleColors.Viewer}
+          ${roleColors[String(value)] ?? roleColors.Viewer}
         `}
       >
-        {value}
+        {String(value)}
       </span>
     );
   }
 
   if (column === "code" || column === "username") {
     return (
-      <span className="font-mono font-semibold text-brand-600">{value}</span>
+      <span className="font-mono font-semibold text-brand-600">
+        {String(value)}
+      </span>
     );
   }
 
   if (column === "courseCount") {
-    return <span className="font-bold text-heading">{value} หลักสูตร</span>;
+    return (
+      <span className="font-bold text-heading">{String(value)} หลักสูตร</span>
+    );
   }
 
   return (
     <span className={column === "name" ? "font-semibold text-heading" : ""}>
-      {value}
+      {String(value ?? "")}
     </span>
   );
 }

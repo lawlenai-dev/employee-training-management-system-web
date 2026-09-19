@@ -9,16 +9,30 @@ import {
   X,
 } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
+import type { FormEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { checkIn, getAttendance, getCourse } from "../api";
+import type { AttendanceApiRecord, CourseApiRecord } from "../api";
 import { Button, Card, Empty, Loading } from "../components/Ui";
 
-function extractCredential(text) {
+type CheckinMode = "qr" | "manual";
+
+type StatusMessage = {
+  ok: boolean;
+  text: string;
+};
+
+function extractCredential(text: string): string {
   const value = text.trim();
   try {
-    const parsed = JSON.parse(value);
-    return parsed.qr_token || parsed.employee_code || value;
+    const parsed = JSON.parse(value) as unknown;
+    if (typeof parsed === "object" && parsed !== null) {
+      const record = parsed as Record<string, unknown>;
+      const credential = record.qr_token ?? record.employee_code;
+      if (typeof credential === "string") return credential;
+    }
+    return value;
   } catch {
     /* not JSON */
   }
@@ -35,30 +49,30 @@ function extractCredential(text) {
 }
 
 export default function Attendance() {
-  const { id } = useParams(),
-    [course, setCourse] = useState(null),
-    [rows, setRows] = useState(null),
+  const { id } = useParams<{ id: string }>(),
+    [course, setCourse] = useState<CourseApiRecord | null>(null),
+    [rows, setRows] = useState<AttendanceApiRecord[] | null>(null),
     [code, setCode] = useState(""),
-    [mode, setMode] = useState("manual"),
+    [mode, setMode] = useState<CheckinMode>("manual"),
     [scannerOpen, setScannerOpen] = useState(false),
-    [message, setMessage] = useState(null),
+    [message, setMessage] = useState<StatusMessage | null>(null),
     [busy, setBusy] = useState(false);
-  const scannerRef = useRef(null),
-    lockedRef = useRef(false);
-  const load = useCallback(
-    () =>
-      Promise.all([getCourse(id), getAttendance(id)]).then(([c, a]) => {
-        setCourse(c.data);
-        setRows(a.data);
-      }),
-    [id],
-  );
+  const lockedRef = useRef(false);
+
+  const load = useCallback(async () => {
+    if (!id) return;
+
+    await Promise.all([getCourse(id), getAttendance(id)]).then(([c, a]) => {
+      setCourse(c.data);
+      setRows(a.data);
+    });
+  }, [id]);
   useEffect(() => {
     load();
   }, [load]);
   const submitCredential = useCallback(
-    async (credential, checkinMode) => {
-      if (!credential || lockedRef.current) return;
+    async (credential: string, checkinMode: CheckinMode) => {
+      if (!id || !credential || lockedRef.current) return;
       lockedRef.current = true;
       setBusy(true);
       setMessage(null);
@@ -73,8 +87,14 @@ export default function Attendance() {
         });
         setCode("");
         await load();
-      } catch (e) {
-        setMessage({ ok: false, text: e.message });
+      } catch (caughtError) {
+        setMessage({
+          ok: false,
+          text:
+            caughtError instanceof Error
+              ? caughtError.message
+              : "ไม่สามารถเช็กชื่อได้",
+        });
       } finally {
         setBusy(false);
         window.setTimeout(() => {
@@ -87,12 +107,12 @@ export default function Attendance() {
   useEffect(() => {
     if (!scannerOpen) return;
     const scanner = new Html5Qrcode("qr-reader");
-    scannerRef.current = scanner;
     scanner
       .start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 240, height: 240 } },
-        (decoded) => submitCredential(decoded, "qr"),
+        (decodedText: string) => submitCredential(decodedText, "qr"),
+        () => undefined,
       )
       .catch(() =>
         setMessage({
@@ -101,16 +121,19 @@ export default function Attendance() {
         }),
       );
     return () => {
-      scanner
-        .stop()
-        .catch(() => {})
-        .finally(() => scanner.clear().catch(() => {}));
-      scannerRef.current = null;
+      if (scanner.isScanning) {
+        scanner
+          .stop()
+          .catch(() => undefined)
+          .finally(() => scanner.clear());
+      } else {
+        scanner.clear();
+      }
     };
   }, [scannerOpen, submitCredential]);
   if (!course || !rows) return <Loading />;
-  const submit = (e) => {
-    e.preventDefault();
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     submitCredential(code, "manual");
   };
   return (
