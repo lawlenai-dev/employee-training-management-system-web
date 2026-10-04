@@ -101,3 +101,96 @@ export function Loading() {
     </div>
   );
 }
+
+export type MultiSelectOption = {
+  value: string;
+  label: ReactNode;
+  disabled?: boolean;
+};
+
+type MultiSelectChipsProps = {
+  label: ReactNode;
+  options: MultiSelectOption[];
+  value: string[];
+  onChange: (value: string[]) => void;
+  helperText?: ReactNode;
+  error?: ReactNode;
+  disabled?: boolean;
+  className?: string;
+};
+
+export function MultiSelectChips({
+  label,
+  options,
+  value,
+  onChange,
+  helperText,
+  error,
+  disabled = false,
+  className = "",
+}: MultiSelectChipsProps) {
+  const toggleOption = (optionValue: string) => {
+    const next = new Set(value);
+
+    if (next.has(optionValue)) {
+      next.delete(optionValue);
+    } else {
+      next.add(optionValue);
+    }
+
+    onChange(Array.from(next));
+  };
+
+  return (
+    <fieldset disabled={disabled} className={`min-w-0 ${className}`}>
+      <legend className="text-sm font-medium text-slate-700">{label}</legend>
+
+      <div className="mt-2 flex flex-wrap gap-2">
+        {options.map((option) => {
+          const selected = value.includes(option.value);
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              disabled={disabled || option.disabled}
+              aria-pressed={selected}
+              onClick={() => toggleOption(option.value)}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                selected
+                  ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+                  : "border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50"
+              }`}
+            >
+              {selected && (
+                <svg
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m5 12 4 4L19 6" />
+                </svg>
+              )}
+
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {error ? (
+        <p role="alert" className="mt-2 text-xs text-red-600">
+          {error}
+        </p>
+      ) : helperText ? (
+        <p className="mt-2 text-xs text-slate-500">{helperText}</p>
+      ) : null}
+    </fieldset>
+  );
+}

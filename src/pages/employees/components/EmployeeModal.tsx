@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Autocomplete from "../../../components/Autocomplete";
 import { Button, Input } from "../../../components/Ui";
 import { positionMockup } from "../../../data";
+import { EmployeePhotoInput } from "../../../components/EmployeePhotoInput";
 
 export type EmployeeStatus = "active" | "resigned" | "canceled";
 
@@ -185,6 +186,7 @@ export default function EmployeeModal({
 }: EmployeeModalProps) {
   const [form, setForm] = useState<EmployeeForm>(EMPTY_FORM);
   const [previewUrl, setPreviewUrl] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const isEdit = mode === "edit";
 
@@ -300,6 +302,11 @@ export default function EmployeeModal({
 
   const selectedCompany =
     companies.find((item) => item.code === form.company) || null;
+
+  const handleCapturedPhoto = (file: File) => {
+    setPhotoFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
   return createPortal(
     <div
       role="presentation"
@@ -357,8 +364,7 @@ export default function EmployeeModal({
                 </h2>
 
                 <p className="mt-0.5 text-sm text-muted">
-                  {description ??
-                    "กรอกข้อมูลพื้นฐานสำหรับสร้างบัญชีและบัตร QR"}
+                  {description ?? "กรอกข้อมูลพื้นฐานสำหรับสร้างบัญชีและบัตร QR"}
                 </p>
               </div>
             </div>
@@ -433,7 +439,7 @@ export default function EmployeeModal({
 
                 {/* Department */}
                 <Autocomplete
-                  label="แผนก *"
+                  label="แผนก"
                   required
                   placeholder="ค้นหาแผนก"
                   options={departments}
@@ -449,7 +455,7 @@ export default function EmployeeModal({
 
                 {/* Position */}
                 <Autocomplete
-                  label="ตำแหน่ง *"
+                  label="ตำแหน่ง"
                   required
                   placeholder="ค้นหาตำแหน่ง"
                   options={positions}
@@ -505,7 +511,7 @@ export default function EmployeeModal({
 
                 {/* Status */}
                 <SelectField
-                  label="สถานะ *"
+                  label="สถานะ"
                   required
                   value={form.status}
                   options={statusOptions}
@@ -582,7 +588,16 @@ export default function EmployeeModal({
                 </label>
 
                 {/* Photo */}
-                <div className="md:col-span-2 xl:col-span-3">
+                <div className="col-span-full">
+                  <EmployeePhotoInput
+                    previewUrl={previewUrl}
+                    onCapture={handleCapturedPhoto}
+                    onPhotoChange={handlePhotoChange}
+                    onRemove={handleRemovePhoto}
+                  />
+                </div>
+                {/* อันล่าง ui สวยอยู่ เก็บไว้เผื่อเลือก */}
+                {/* <div className="md:col-span-2 xl:col-span-3">
                   <p className="mb-2 text-sm font-medium text-slate-700">
                     รูปพนักงาน
                   </p>
@@ -658,7 +673,7 @@ export default function EmployeeModal({
                       </div>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Error */}
                 {error && (

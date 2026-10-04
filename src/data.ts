@@ -2,23 +2,24 @@ export type ActiveStatus = "active" | "inactive";
 export type CourseStatus = "OPEN" | "DRAFT" | "CLOSED" | "CANCELLED";
 
 export type EmployeeDetail = {
-  id: number;
+  id: string | number;
   employee_code: string;
-  prefix: string;
-  first_name: string;
-  last_name: string;
-  gender: string;
-  nationality: string;
-  blood_group: string;
-  department: string;
-  position: string;
-  supplier_name: string;
-  birth_date: string;
   qr_token: string;
-  is_active: number;
-  created_at: string;
-  updated_at: string;
+  is_active: boolean | number | string;
+  prefix?: string;
+  first_name?: string;
+  last_name?: string;
+  gender?: string;
+  nationality?: string;
+  blood_group?: string;
+  department?: string;
+  position?: string;
+  supplier_name?: string;
+  birth_date?: string;
+  created_at?: string;
+  updated_at?: string;
 };
+
 export type CourseMock = {
   id: number;
   title: string;
@@ -708,6 +709,12 @@ const roleOptions = [
   { label: "Trainer", value: "Trainer" },
 ];
 
+const preRegistrationRequests = [
+  { id: 1, employeeName: "สมชาย ใจดี", requestStatus: "pending" },
+  { id: 2, employeeName: "วิภา พรหมมา", requestStatus: "pending" },
+  { id: 3, employeeName: "คำแพง สีสุวัน", requestStatus: "pending" },
+  { id: 4, employeeName: "สุดา มั่นคง", requestStatus: "approved" },
+];
 export {
   employeesMockup,
   coursesMockup,
@@ -718,4 +725,5 @@ export {
   supplierMockup,
   userPermissionMockup,
   roleOptions,
+  preRegistrationRequests
 };

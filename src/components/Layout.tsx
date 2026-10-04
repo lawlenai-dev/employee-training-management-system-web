@@ -14,6 +14,8 @@ import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import type { Permission } from "../auth/AuthContext";
 import { useAuth } from "../auth/AuthContext";
+import { preRegistrationRequests } from "../data";
+import { usePreRegistrations } from "../auth/PreRegistrationContext";
 
 type NavigationLink = {
   to: string;
@@ -60,12 +62,21 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, hasAnyPermission } = useAuth();
+  const { requests } = usePreRegistrations();
+
   const isHome = location.pathname === "/dashboard";
   const isDashboard = location.pathname === "/courses";
   const visibleLinks = links.filter((link) =>
     hasAnyPermission(link.permissions),
   );
 
+  const pendingPreRegistrationCount = hasAnyPermission([
+    "preregistration.review",
+  ])
+    ? requests.filter(
+        (request) => request.requestStatus === "pending",
+      ).length
+    : 0;
   const handleLogout = () => {
     logout();
     navigate("/login", { replace: true });
@@ -120,20 +131,32 @@ export default function Layout() {
                 to={to}
                 end={to === "/"}
                 className={({ isActive }) => `
-                  relative rounded-lg px-4 py-2.5
-                  text-sm font-medium transition
-                  ${
-                    isActive
-                      ? isHome || isDashboard
-                        ? "bg-white/15 text-white"
-                        : "bg-brand-50 text-brand-600"
-                      : isHome || isDashboard
-                        ? "text-white/75 hover:bg-white/10 hover:text-white"
-                        : "text-body hover:bg-brand-50 hover:text-brand-600"
-                  }
-                `}
+      relative flex items-center gap-2 rounded-lg px-4 py-2.5
+      text-sm font-medium transition
+      ${
+        isActive
+          ? isHome || isDashboard
+            ? "bg-white/15 text-white"
+            : "bg-brand-50 text-brand-600"
+          : isHome || isDashboard
+            ? "text-white/75 hover:bg-white/10 hover:text-white"
+            : "text-body hover:bg-brand-50 hover:text-brand-600"
+      }
+    `}
               >
                 {label}
+
+                {to === "/pre-registrations" &&
+                  pendingPreRegistrationCount > 0 && (
+                    <span
+                      className="flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-1.5 text-[10px] 
+                    font-bold leading-none text-white"
+                    >
+                      {pendingPreRegistrationCount > 99
+                        ? "99+"
+                        : pendingPreRegistrationCount}
+                    </span>
+                  )}
               </NavLink>
             ))}
           </nav>
@@ -249,6 +272,14 @@ export default function Layout() {
             >
               <Icon size={19} />
               {label}
+              {to === "/pre-registrations" &&
+                pendingPreRegistrationCount > 0 && (
+                  <span className="flex min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 py-1 text-xs font-bold leading-none text-white">
+                    {pendingPreRegistrationCount > 99
+                      ? "99+"
+                      : pendingPreRegistrationCount}
+                  </span>
+                )}
             </NavLink>
           ))}
         </nav>

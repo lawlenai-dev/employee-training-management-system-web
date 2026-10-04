@@ -13,15 +13,25 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import type { ReactNode } from "react";
 import { useState, useMemo } from "react";
-import { employeesMockup } from "../../data";
+import { useSearchParams } from "react-router-dom";
+import { employeesMockup, positionMockup } from "../../data";
 import { useAuth } from "../../auth/AuthContext";
-import { usePreRegistrations } from "../../auth/PreRegistrationContext";
-import { Button, Card, Empty, Loading, PageTitle } from "../../components/Ui";
+import { PreRegistration, usePreRegistrations } from "../../auth/PreRegistrationContext";
+import {
+  Button,
+  Card,
+  Empty,
+  Loading,
+  MultiSelectChips,
+  PageTitle,
+} from "../../components/Ui";
 import HeroCover from "../../components/HeroCover";
 import DataTable from "../../components/DataTable";
 import EmployeeModal from "./components/EmployeeModal";
 import type { EmployeeFormSubmission } from "./components/EmployeeModal";
-import EmployeeDetailModal, { EmployeeTrainingHistory } from "./components/EmployeeDetailModal";
+import EmployeeDetailModal, {
+  EmployeeTrainingHistory,
+} from "./components/EmployeeDetailModal";
 
 type Employee = {
   id: string | number;
@@ -51,8 +61,7 @@ const createDemoEmployees = (): Employee[] =>
   (employeesMockup as Employee[]).map((employee, index) => ({
     ...employee,
     supplier_id: index % 2 === 0 ? 101 : 102,
-    supplier_name:
-      index % 2 === 0 ? "Supplier A" : "Supplier B",
+    supplier_name: index % 2 === 0 ? "Supplier A" : "Supplier B",
   }));
 
 const trainingHistoryMockup: EmployeeTrainingHistory[] = [
@@ -125,6 +134,22 @@ const trainingHistoryMockup: EmployeeTrainingHistory[] = [
 ];
 
 export default function Employees() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const trainingStatus = searchParams.get("trainingStatus") ?? "";
+  const supplierId = searchParams.get("supplierId") ?? "";
+  const startTime = searchParams.get("startTime") ?? "";
+  const endTime = searchParams.get("endTime") ?? "";
+  const selectedPosition = searchParams.get("position") ?? "";
+  const searchText = searchParams.get("search") ?? "";
+  const invalidDateRange = Boolean(startTime && endTime && startTime > endTime);
+  const setFilter = (name: string, value: string) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (value) next.set(name, value);
+      else next.delete(name);
+      return next;
+    });
+  };
   const { user, hasPermission } = useAuth();
   const { requests, submitRequest } = usePreRegistrations();
   const [employees, setEmployees] = useState<Employee[]>(createDemoEmployees),
@@ -166,7 +191,11 @@ export default function Employees() {
 
   const registeredEmployees = useMemo<Employee[]>(() => {
     const approvedEmployees: Employee[] = requests
-      .filter((request) => request.requestStatus === "approved")
+      .filter(
+        (request): request is PreRegistration  & { employee_code: string } =>
+          request.requestStatus === "approved" &&
+          Boolean(request.employee_code?.trim()),
+      )
       .map((request) => ({
         id: request.id,
         employee_code: request.employee_code,
@@ -194,24 +223,53 @@ export default function Employees() {
 
   const filteredEmployees = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-
-    if (!keyword) return visibleEmployees;
-
-    return visibleEmployees.filter((employee) =>
-      [
-        employee.employee_code,
-        employee.first_name,
-        employee.last_name,
-        employee.full_name,
-        employee.department,
-        employee.position,
-      ].some((value) =>
-        String(value ?? "")
-          .toLowerCase()
-          .includes(keyword),
-      ),
+    if (invalidDateRange) return [];
+    const passedCodes = new Set(
+      trainingHistoryMockup
+        .filter(
+          (history) =>
+            history.result === "passed" &&
+            (!startTime || history.training_date >= startTime) &&
+            (!endTime || history.training_date <= endTime),
+        )
+        .map((history) => history.employee_code),
     );
-  }, [search, visibleEmployees]);
+
+    return visibleEmployees.filter((employee) => {
+      if (supplierId && String(employee.supplier_id ?? "") !== supplierId)
+        return false;
+      const passed = passedCodes.has(employee.employee_code);
+      if (
+        trainingStatus === "not-passed" &&
+        (Number(employee.is_active) !== 1 || passed)
+      )
+        return false;
+      if (trainingStatus === "passed" && !passed) return false;
+      return (
+        !keyword ||
+        [
+          employee.employee_code,
+          employee.first_name,
+          employee.last_name,
+          employee.full_name,
+          employee.department,
+          employee.position,
+        ].some((value) =>
+          String(value ?? "")
+            .toLowerCase()
+            .includes(keyword),
+        )
+      );
+    });
+  }, [
+    search,
+    visibleEmployees,
+    supplierId,
+    trainingStatus,
+    startTime,
+    endTime,
+    invalidDateRange,
+  ]);
 
   const activeCount = visibleEmployees.filter((employee) =>
     Number(employee.is_active),
@@ -316,6 +374,29 @@ export default function Employees() {
     [],
   );
 
+  const statusOptions = [
+    { value: "active", label: "Active" },
+    { value: "resign", label: "Resign" },
+    { value: "blacklist", label: "Blacklist" },
+    { value: "cancel", label: "Cancel" },
+  ];
+
+  const selectedStatuses = searchParams.getAll("status");
+
+  const handleStatusChange = (values: string[]) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+
+      next.delete("status");
+
+      values.forEach((value) => {
+        next.append("status", value);
+      });
+
+      return next;
+    });
+  };
+
   return (
     <>
       <HeroCover
@@ -367,7 +448,113 @@ export default function Employees() {
               </div>
             )}
 
-            {/* Summary และ Search */}
+            {/* filter และ Search */}
+            <div className="mt-5 grid gap-4 border-t border-border pt-5 sm:grid-cols-2 lg:grid-cols-4">
+              {hasPermission("employees.view_all") && (
+                <label className="text-sm font-medium text-heading ">
+                  บริษัท
+                  <select
+                    value={supplierId}
+                    onChange={(event) =>
+                      setFilter("supplierId", event.target.value)
+                    }
+                    className="mt-2 w-full rounded-control border border-border bg-white px-3 py-2.5 text-body"
+                  >
+                    <option value="">ทุกบริษัท</option>
+                    {Array.from(
+                      new Map(
+                        visibleEmployees
+                          .filter((employee) => employee.supplier_id != null)
+                          .map((employee) => [
+                            String(employee.supplier_id),
+                            employee.supplier_name ??
+                              String(employee.supplier_id),
+                          ]),
+                      ).entries(),
+                    ).map(([id, name]) => (
+                      <option key={id} value={id}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="text-sm font-medium text-heading">
+                ตำแหน่ง
+                <select
+                  value={selectedPosition}
+                  onChange={(event) =>
+                    setFilter("position", event.target.value)
+                  }
+                  className="mt-2 w-full rounded-control border border-border bg-white px-3 py-2.5 text-body"
+                >
+                  <option value="">ทั้งหมด</option>
+
+                  {positionMockup
+                    .filter((position) => position.status === "active")
+                    .map((position) => (
+                      <option key={position.id} value={position.code}>
+                        {position.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label className="text-sm font-medium text-heading sm:col-span-2">
+                ค้นหาพนักงาน
+                <input
+                  type="search"
+                  value={searchText}
+                  onChange={(event) => setFilter("search", event.target.value)}
+                  placeholder="ชื่อ หรือรหัสพนักงาน"
+                  className="mt-2 w-full rounded-control border border-border bg-white px-3 py-2.5 text-body"
+                />
+              </label>
+              <fieldset className="min-w-0 sm:col-span-2">
+                <legend className="text-sm font-medium text-heading">
+                  ช่วงวันที่ลงทะเบียน
+                </legend>
+
+                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className="text-xs font-medium text-body">
+                    {/* ตั้งแต่วันที่ */}
+                    <input
+                      type="date"
+                      value={startTime}
+                      max={endTime || undefined}
+                      onChange={(event) =>
+                        setFilter("startTime", event.target.value)
+                      }
+                      className="mt-1.5 w-full rounded-control border border-border bg-white px-3 py-2.5 text-sm text-body"
+                    />
+                  </label>
+
+                  <label className="text-xs font-medium text-body">
+                    {/* ถึงวันที่ */}
+                    <input
+                      type="date"
+                      value={endTime}
+                      min={startTime || undefined}
+                      onChange={(event) =>
+                        setFilter("endTime", event.target.value)
+                      }
+                      className="mt-1.5 w-full rounded-control border border-border bg-white px-3 py-2.5 text-sm text-body"
+                    />
+                  </label>
+                </div>
+
+                <p className="mt-2 text-xs text-gray-500">
+                  วันที่สิ้นสุดต้องตรงกับหรืออยู่หลังวันที่เริ่มต้น
+                </p>
+              </fieldset>
+              <MultiSelectChips
+                label="สถานะพนักงาน"
+                options={statusOptions}
+                value={selectedStatuses}
+                onChange={handleStatusChange}
+                helperText="เลือกได้หลายสถานะ · ไม่เลือกหมายถึงทุกสถานะ"
+                className="sm:col-span-2 lg:col-span-6"
+              />
+            </div>
             <div className="mt-6 flex flex-col gap-4 border-t border-border pt-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap gap-3">
                 <div className="rounded-xl bg-brand-50 px-4 py-2">
@@ -384,27 +571,29 @@ export default function Employees() {
                   </p>
                 </div>
               </div>
-
-              <div className="relative w-full lg:max-w-md">
-                <Search
-                  size={18}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="ค้นหารหัส ชื่อ แผนก หรือตำแหน่ง..."
-                  className="
-                  h-11 w-full rounded-control border border-border
-                  bg-white pl-10 pr-4 text-sm text-body
-                  outline-none transition placeholder:text-placeholder
-                  focus:border-brand-500 focus:ring-4 focus:ring-brand-100
-                "
-                />
-              </div>
             </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+              <p>
+                ช่วงวันที่กรองตามวันที่ผ่านการอบรม ·
+                ประวัติการอบรมขณะนี้เป็นข้อมูลตัวอย่าง
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setSearchParams({});
+                }}
+                className="font-semibold text-brand-600 hover:text-brand-700"
+              >
+                ล้างตัวกรอง
+              </button>
+            </div>
+            {invalidDateRange && (
+              <p role="alert" className="mt-2 text-sm text-red-600">
+                วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น
+              </p>
+            )}
           </Card>
 
           {/* Add employee form */}
@@ -500,12 +689,14 @@ export default function Employees() {
         </div>
       </section>
 
-      <EmployeeDetailModal
-        open={Boolean(viewingEmployee)}
-        employee={viewingEmployee}
-        histories={selectedTrainingHistory}
-        onClose={() => setViewingEmployee(null)}
-      />
+      {viewingEmployee && (
+        <EmployeeDetailModal
+          open
+          employee={viewingEmployee}
+          histories={selectedTrainingHistory}
+          onClose={() => setViewingEmployee(null)}
+        />
+      )}
 
       {/* QR Modal */}
       {selected && (

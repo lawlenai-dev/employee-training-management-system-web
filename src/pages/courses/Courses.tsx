@@ -10,12 +10,15 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import SessionModal from "./components/SessionModal";
+import { createTrainingSession, getTrainingSessions } from "./components/trainingSessions";
+import type { TrainingSession } from "./components/trainingSessions";
 // import { createCourse, getCourses } from "../api";
 import { coursesMockup } from "../../data";
 import { Button, Card, Empty, Input, Loading } from "../../components/Ui";
 import HeroCover from "../../components/HeroCover";
-import CourseModal from "../../components/CourseModal";
+import CourseModal from "./components/CourseModal";
 
 type CourseStatus = "OPEN" | "DRAFT" | "CLOSED" | "CANCELLED";
 
@@ -66,6 +69,17 @@ const initial: CourseForm = {
 };
 
 export default function Courses() {
+  const navigate = useNavigate();
+  const [sessionCourse, setSessionCourse] = useState<Course | null>(null);
+  const [sessions, setSessions] = useState<TrainingSession[]>([]);
+  const [sessionError, setSessionError] = useState("");
+  const openSessionModal = (course: Course) => {
+    setSessionError("");
+    try { setSessions(getTrainingSessions()); }
+    catch { setSessionError("ไม่สามารถอ่านข้อมูลรอบอบรมได้ กรุณาตรวจสอบข้อมูลที่บันทึกไว้"); return; }
+    setCourseModal((current) => ({ ...current, open: false }));
+    setSessionCourse(course);
+  };
   const [courses, setCourses] = useState<Course[] | null>(null),
     [show, setShow] = useState(false),
     [form, setForm] = useState<CourseForm>(initial),
@@ -107,6 +121,7 @@ export default function Courses() {
   // const load = () => getCourses().then((r) => setCourses(r.data));
   useEffect(() => {
     setCourses(coursesMockup as Course[]);
+    try { setSessions(getTrainingSessions()); } catch { setSessionError("ไม่สามารถอ่านข้อมูลรอบอบรมได้"); }
     // load();
   }, []);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -148,6 +163,18 @@ export default function Courses() {
   };
   return (
     <>
+      {sessionCourse && <SessionModal
+        key={sessionCourse.id}
+        course={sessionCourse}
+        sessionNo={Math.max(0, ...sessions.filter((session) => session.course_id === String(sessionCourse.id)).map((session) => session.session_no)) + 1}
+        onClose={() => setSessionCourse(null)}
+        onCreate={(input) => {
+          const session = createTrainingSession(sessionCourse, input);
+          setSessions((current) => [...current, session]);
+          setSessionCourse(null);
+          navigate(`/courses/${sessionCourse.id}/sessions/${encodeURIComponent(session.id)}`, { state: { session } });
+        }}
+      />}
       <HeroCover
         size="large"
         image="/course-cover.jpg"
@@ -189,6 +216,7 @@ export default function Courses() {
             </Button>
           </div>
 
+          {sessionError && <p role="alert" className="mb-4 rounded-xl bg-danger-50 p-4 text-danger-600">{sessionError}</p>}
           {/* แบบฟอร์มสร้างหลักสูตร */}
           {show && (
             <Card className="mb-8 overflow-hidden border-0 shadow-lg shadow-slate-900/5">
@@ -562,7 +590,7 @@ export default function Courses() {
 
                           <div className="text-right">
                             <p className="text-2xl font-bold leading-none text-brand-700">
-                              {course.attendance_count ?? 0}
+                              {sessions.filter((session) => session.course_id === String(course.id)).length}
                             </p>
 
                             <p className="mt-1 text-[11px] text-muted">รอบ</p>
@@ -570,8 +598,9 @@ export default function Courses() {
                         </div>
 
                         {/* Action */}
-                        <Link
-                          to={`/courses/${course.id}/attendance`}
+                        <button
+                          type="button"
+                          onClick={() => openSessionModal(course)}
                           className="
               mt-4 flex w-full items-center justify-between
               rounded-2xl bg-brand-600 px-4 py-3.5
@@ -593,7 +622,7 @@ export default function Courses() {
                             size={18}
                             className="transition-transform duration-300 group-hover:translate-x-1"
                           />
-                        </Link>
+                        </button>
                       </div>
                     </div>
                   </article>
@@ -613,9 +642,7 @@ export default function Courses() {
         onSubmit={submit}
         saving={saving}
         error={error}
-        // onOpenAttendance={(selectedCourse) => {
-        //   navigate(`/courses/${selectedCourse.id}/attendance`);
-        // }}
+        onOpenAttendance={openSessionModal}
       />
     </>
   );

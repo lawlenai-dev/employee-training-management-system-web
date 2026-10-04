@@ -419,6 +419,7 @@ function CellValue({ column, value }: CellValueProps) {
       Admin: "bg-brand-50 text-brand-700",
       HR: "bg-purple-50 text-purple-700",
       Trainer: "bg-accent-50 text-accent-700",
+      Supplier: "bg-orange-50 text-orange-700",
       Viewer: "bg-slate-100 text-slate-600",
     };
 
@@ -432,6 +433,15 @@ function CellValue({ column, value }: CellValueProps) {
         {String(value)}
       </span>
     );
+  }
+
+  if (column === "supplierTier") {
+    const labels: Record<string, string> = {
+      tier1: "Tier 1",
+      tier2: "Tier 2",
+      tier3: "Tier 3",
+    };
+    return <span className="text-sm text-body">{labels[String(value)] ?? "—"}</span>;
   }
 
   if (column === "code" || column === "username") {

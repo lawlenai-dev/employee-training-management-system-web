@@ -1,20 +1,16 @@
-import {
-  Building2,
-  Check,
-  ClipboardCheck,
-  Clock3,
-  X,
-} from "lucide-react";
-import { useMemo } from "react";
+import { Building2, ClipboardCheck, Clock3, Eye } from "lucide-react";
+import { useMemo, useState } from "react";
+import PreRegistrationReviewModal from "./components/PreRegistrationReviewModal";
 import { useAuth } from "../../auth/AuthContext";
 import {
   usePreRegistrations,
+  getRequestHistory,
   type PreRegistration,
 } from "../../auth/PreRegistrationContext";
 import DataTable from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import HeroCover from "../../components/HeroCover";
-import { Button, Card, Empty, PageTitle } from "../../components/Ui";
+import { Card, Empty, PageTitle } from "../../components/Ui";
 
 const statusLabels = {
   pending: "รอตรวจสอบ",
@@ -25,6 +21,11 @@ const statusLabels = {
 export default function PreRegistrations() {
   const { user, hasPermission } = useAuth();
   const { requests, approveRequest, rejectRequest } = usePreRegistrations();
+    console.log("request", requests);
+  
+  const [review, setReview] = useState<{
+    request: PreRegistration;
+  } | null>(null);
   const canReview = hasPermission("preregistration.review");
 
   const visibleRequests = useMemo(
@@ -42,12 +43,17 @@ export default function PreRegistrations() {
   const columns = useMemo<DataTableColumn<PreRegistration>[]>(
     () => [
       {
+        header: "ประเภทคำขอ",
+        accessor: (row) => row.requestType ?? (row.employee_code ? "update" : "register"),
+        cell: ({ value }) => <span className="text-sm font-semibold text-brand-600">{value === "update" ? "แก้ไขข้อมูล" : "ลงทะเบียนใหม่"}</span>,
+      },
+      {
         header: "รหัส / ชื่อพนักงาน",
         accessor: (row) => row,
         cell: ({ row }) => (
           <div>
             <p className="font-mono text-xs font-bold text-brand-600">
-              {row.employee_code}
+              {row.employee_code }
             </p>
             <p className="mt-1 font-semibold text-heading">
               {row.first_name} {row.last_name}
@@ -114,13 +120,21 @@ export default function PreRegistrations() {
     [],
   );
 
-  const handleReject = (request: PreRegistration) => {
-    const reason = window.prompt("ระบุเหตุผลที่ไม่อนุมัติ");
-    if (reason?.trim()) rejectRequest(request.id, reason.trim());
-  };
-
   return (
     <>
+      {review && (
+        <PreRegistrationReviewModal
+          request={
+            requests.find((request) => request.id === review.request.id) ??
+            review.request
+          }
+          canReview={canReview}
+          histories={visibleRequests.filter((request) => request.id === review.request.id || Boolean(review.request.employee_code && request.employee_code === review.request.employee_code)).flatMap(getRequestHistory)}
+          onClose={() => setReview(null)}
+          onApprove={approveRequest}
+          onReject={rejectRequest}
+        />
+      )}
       <HeroCover
         size="small"
         image="/training-cover.jpg"
@@ -175,36 +189,13 @@ export default function PreRegistrations() {
                 data={visibleRequests}
                 rowKey="id"
                 minWidth="980px"
-                actions={
-                  canReview
-                    ? (request) =>
-                        request.requestStatus === "pending" ? (
-                          <div className="inline-flex gap-2">
-                            <Button
-                              type="button"
-                              onClick={() => approveRequest(request.id)}
-                              className="px-3 py-2"
-                            >
-                              <Check size={16} />
-                              อนุมัติ
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="danger"
-                              onClick={() => handleReject(request)}
-                              className="px-3 py-2"
-                            >
-                              <X size={16} />
-                              ไม่อนุมัติ
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted">
-                            ตรวจสอบแล้ว
-                          </span>
-                        )
-                    : undefined
-                }
+                actions={(request) => (
+                  <button type="button" title="ดูข้อมูลและประวัติคำขอ" aria-label={`ดูข้อมูล ${request.first_name} ${request.last_name}`}
+                    onClick={() => setReview({ request })}
+                    className="inline-flex items-center gap-2 rounded-control bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-700 hover:text-white">
+                    <Eye size={18} /> 
+                  </button>
+                )}
               />
             </Card>
           )}

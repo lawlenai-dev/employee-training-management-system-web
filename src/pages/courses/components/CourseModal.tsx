@@ -20,12 +20,13 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Button, Input } from "./Ui";
+import { Button, Input } from "../../../components/Ui";
 
 export type CourseStatus = "OPEN" | "DRAFT" | "CLOSED" | "CANCELLED";
 export type CourseModalMode = "create" | "view" | "edit";
 
 export type CourseForm = {
+  course_type?: string;
   title: string;
   description: string;
   course_date: string;
@@ -318,13 +319,30 @@ function CreateCourseForm({
           label="ชื่อหลักสูตร *"
           required
           autoFocus
-          placeholder="เช่น การปฐมนิเทศความปลอดภัย"
+          placeholder=""
           value={form.title}
           onChange={(event) => updateForm("title", event.target.value)}
         />
       </div>
-
-      <Input
+      
+      <div>
+        <label className="block text-sm font-medium text-heading">
+          ประเภทคอร์สอบรม
+          <select
+            value={form.course_type ?? ""}
+            onChange={(event) => updateForm("course_type", event.target.value)}
+            className="mt-2 w-full rounded-lg border border-border bg-white px-3 py-2.5 text-body focus:border-brand-600 focus:outline-none"
+          >
+            <option value="">เลือกประเภท</option>
+            {/* {companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.name}
+              </option>
+            ))} */}
+          </select>
+        </label>
+      </div>
+      {/* <Input
         label="วันที่อบรม *"
         type="date"
         required
@@ -337,9 +355,9 @@ function CreateCourseForm({
         placeholder="เช่น ห้องประชุมชั้น 2"
         value={form.location}
         onChange={(event) => updateForm("location", event.target.value)}
-      />
+      /> */}
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* <div className="grid grid-cols-2 gap-3">
         <Input
           label="เวลาเริ่ม"
           type="time"
@@ -353,11 +371,11 @@ function CreateCourseForm({
           value={form.end_time}
           onChange={(event) => updateForm("end_time", event.target.value)}
         />
-      </div>
+      </div> */}
 
       <Input
         label="วิทยากร"
-        placeholder="ชื่อวิทยากรหรือหน่วยงาน"
+        placeholder=""
         value={form.instructor}
         onChange={(event) => updateForm("instructor", event.target.value)}
       />

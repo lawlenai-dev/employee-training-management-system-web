@@ -56,6 +56,7 @@ export const settingsConfig: Record<SettingMenuKey, SettingDefinition> = {
       { key: "username", label: "Username" },
       { key: "department", label: "แผนก" },
       { key: "role", label: "สิทธิ์" },
+      { key: "supplierTier", label: "Supplier Tier" },
       { key: "status", label: "สถานะ" },
     ],
     formFields: [
@@ -74,6 +75,18 @@ export const settingsConfig: Record<SettingMenuKey, SettingDefinition> = {
           { label: "Trainer", value: "Trainer" },
         ],
       },
+      {
+        key: "supplierTier",
+        label: "Supplier Tier",
+        type: "select",
+        required: true,
+        defaultValue: "",
+        options: [
+          { label: "Tier 1", value: "tier1" },
+          { label: "Tier 2", value: "tier2" },
+          { label: "Tier 3", value: "tier3" },
+        ],
+      },
       STATUS_FIELD,
     ],
     validationSchema: Yup.object({
@@ -81,6 +94,13 @@ export const settingsConfig: Record<SettingMenuKey, SettingDefinition> = {
       username: Yup.string().trim().min(4, "Username ต้องมีอย่างน้อย 4 ตัวอักษร").max(30, "Username ต้องไม่เกิน 30 ตัวอักษร").matches(/^[A-Za-z0-9._-]+$/, "Username ใช้ได้เฉพาะภาษาอังกฤษ ตัวเลข จุด - และ _").required("กรุณากรอก Username"),
       department: Yup.string().trim().required("กรุณากรอกแผนก"),
       role: Yup.string().oneOf(["Admin", "Viewer", "Supplier", "Trainer"], "กรุณาเลือกสิทธิ์").required("กรุณาเลือกสิทธิ์"),
+      supplierTier: Yup.string().when("role", {
+        is: "Supplier",
+        then: (schema) => schema
+          .oneOf(["tier1", "tier2", "tier3"], "กรุณาเลือก Tier 1, Tier 2 หรือ Tier 3")
+          .required("กรุณาเลือกระดับ Supplier"),
+        otherwise: (schema) => schema.notRequired().strip(),
+      }),
       status: statusValidation,
     }),
     rows: userPermissionMockup as SettingRow[],

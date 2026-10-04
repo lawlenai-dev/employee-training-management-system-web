@@ -1,6 +1,7 @@
 import { Form, Formik } from "formik";
 import { X } from "lucide-react";
 import { useEffect, useId, useMemo } from "react";
+import type { ChangeEvent } from "react";
 import { Button } from "../../../components/Ui";
 import type {
   SettingDefinition,
@@ -67,6 +68,9 @@ export default function SettingFormModal({
           const normalizedValues = setting.formFields.reduce<
             Record<string, unknown>
           >((result, field) => {
+            if (field.key === "supplierTier" && values.role !== "Supplier") {
+              return result;
+            }
             const value = values[field.key]?.trim() ?? "";
             result[field.key] =
               field.type === "number" ? Number(value || 0) : value;
@@ -84,6 +88,8 @@ export default function SettingFormModal({
           values,
           handleBlur,
           handleChange,
+          setValues,
+          setFieldTouched,
           isSubmitting,
         }) => (
           <Form
@@ -115,6 +121,9 @@ export default function SettingFormModal({
 
             <div className="grid gap-5 px-5 py-6 sm:grid-cols-2 sm:px-6">
               {setting.formFields.map((field, index) => {
+                if (field.key === "supplierTier" && values.role !== "Supplier") {
+                  return null;
+                }
                 const inputId = `${formId}-${field.key}`;
                 const errorId = `${inputId}-error`;
                 const error =
@@ -130,7 +139,20 @@ export default function SettingFormModal({
                   id: inputId,
                   name: field.key,
                   value: values[field.key] ?? "",
-                  onChange: handleChange,
+                  onChange: (
+                    event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+                  ) => {
+                    if (field.key === "role" && "supplierTier" in values) {
+                      void setValues({
+                        ...values,
+                        role: event.target.value,
+                        supplierTier: "",
+                      });
+                      void setFieldTouched("supplierTier", false, false);
+                    } else {
+                      handleChange(event);
+                    }
+                  },
                   onBlur: handleBlur,
                   "aria-required": field.required,
                   "aria-invalid": Boolean(error),
