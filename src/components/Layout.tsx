@@ -49,6 +49,24 @@ const links: NavigationLink[] = [
     icon: ClipboardCheck,
     permissions: ["preregistration.view_own", "preregistration.review"],
   },
+  // {
+  //   to: "/",
+  //   label: "Accident Report",
+  //   icon: ClipboardCheck,
+  //   permissions: ["preregistration.view_own", "preregistration.review"],
+  // },
+  // {
+  //   to: "/",
+  //   label: "ใบเตือน",
+  //   icon: ClipboardCheck,
+  //   permissions: ["preregistration.view_own", "preregistration.review"],
+  // },
+  // {
+  //   to: "/",
+  //   label: "รายการสุ่มตรวจเฝ้าระวัง",
+  //   icon: ClipboardCheck,
+  //   permissions: ["preregistration.view_own", "preregistration.review"],
+  // },
   {
     to: "/settings",
     label: "ตั้งค่า",
@@ -73,9 +91,7 @@ export default function Layout() {
   const pendingPreRegistrationCount = hasAnyPermission([
     "preregistration.review",
   ])
-    ? requests.filter(
-        (request) => request.requestStatus === "pending",
-      ).length
+    ? requests.filter((request) => request.requestStatus === "pending").length
     : 0;
   const handleLogout = () => {
     logout();
