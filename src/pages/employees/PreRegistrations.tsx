@@ -21,7 +21,6 @@ const statusLabels = {
 export default function PreRegistrations() {
   const { user, hasPermission } = useAuth();
   const { requests, approveRequest, rejectRequest } = usePreRegistrations();
-    console.log("request", requests);
   
   const [review, setReview] = useState<{
     request: PreRegistration;

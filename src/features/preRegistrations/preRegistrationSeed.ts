@@ -1,0 +1,25 @@
+import type { PreRegistration } from "./preRegistration.types";
+export const createInitialRequests = (): PreRegistration[] => [
+  {
+    id: "PRE-DEMO-001",
+    requestType: "register",
+    prefix: "นาย",
+    first_name: "สมชาย",
+    last_name: "ทดลองงาน",
+    department: "Construction",
+    position: "Worker",
+    birth_date: "1995-05-12",
+    nationality: "TH",
+    company: "Supplier A",
+    gender: "male",
+    note: "",
+    photo_url: "",
+    status: "active",
+    supplierId: 101,
+    supplierName: "Supplier A",
+    requestStatus: "pending",
+    submittedAt: new Date().toISOString(),
+    blood_group: "A",
+    active: 1,
+  },
+];

@@ -1,0 +1,82 @@
+import { positionMockup, supplierMockup } from "../../data";
+import type {
+  SettingRow,
+  SettingRowsByMenu,
+} from "../../pages/settings/settings.types";
+export const createInitialSettings = (): SettingRowsByMenu => ({
+  positions: positionMockup as SettingRow[],
+  subcontractors: supplierMockup as SettingRow[],
+  categories: [
+    {
+      id: 1,
+      code: "SAFETY",
+      name: "ความปลอดภัย",
+      description: "หลักสูตรอบรมด้านความปลอดภัยในการทำงาน",
+      courseCount: 12,
+      status: "active",
+    },
+    {
+      id: 2,
+      code: "TECHNICAL",
+      name: "ทักษะเฉพาะทาง",
+      description: "หลักสูตรอบรมด้านเทคนิคและการปฏิบัติงาน",
+      courseCount: 8,
+      status: "active",
+    },
+    {
+      id: 3,
+      code: "MANAGEMENT",
+      name: "การบริหารจัดการ",
+      description: "หลักสูตรสำหรับหัวหน้างานและผู้บริหาร",
+      courseCount: 5,
+      status: "active",
+    },
+    {
+      id: 4,
+      code: "GENERAL",
+      name: "ความรู้ทั่วไป",
+      description: "หลักสูตรทั่วไปสำหรับพนักงาน",
+      courseCount: 3,
+      status: "inactive",
+    },
+  ],
+  types: [
+    {
+      id: 1,
+      code: "INTERNAL",
+      name: "อบรมภายใน",
+      category: "ความปลอดภัย",
+      description: "จัดอบรมโดยวิทยากรภายในบริษัท",
+      status: "active",
+    },
+    {
+      id: 2,
+      code: "EXTERNAL",
+      name: "อบรมภายนอก",
+      category: "ทักษะเฉพาะทาง",
+      description: "ส่งพนักงานเข้าอบรมกับหน่วยงานภายนอก",
+      status: "active",
+    },
+    {
+      id: 3,
+      code: "ONLINE",
+      name: "Online Training",
+      category: "ความรู้ทั่วไป",
+      description: "เรียนผ่านระบบออนไลน์",
+      status: "active",
+    },
+    {
+      id: 4,
+      code: "ONSITE",
+      name: "On-site Training",
+      category: "ความปลอดภัย",
+      description: "จัดอบรมภายในพื้นที่ปฏิบัติงาน",
+      status: "inactive",
+    },
+  ],
+  companies: [],
+  department: [],
+  sections: [],
+  subsections: [],
+  camps: [],
+});

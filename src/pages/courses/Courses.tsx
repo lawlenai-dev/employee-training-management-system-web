@@ -203,7 +203,7 @@ export default function Courses() {
             </div>
 
             <Button
-              className="mt-4 w-full sm:mt-0 sm:w-auto"
+              className="mt-4 w-full sm:mt-0 sm:w-auto "
               // onClick={() => setShow(!show)}
               onClick={openCreateModal}
             >

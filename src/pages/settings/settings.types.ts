@@ -3,18 +3,25 @@ import type { ReactNode } from "react";
 import type { AnyObjectSchema } from "yup";
 
 export type SettingMenuKey =
+  | "roles"
   | "users"
   | "positions"
-  | "suppliers"
+  | "subcontractors"
   | "categories"
-  | "types";
+  | "types"
+  | "companies"
+  | "department"
+  | "sections"
+  | "subsections"
+  | "camps";
 
 export type SettingRow = {
   id: string | number;
   [key: string]: unknown;
 };
 
-export type SettingRowsByMenu = Record<SettingMenuKey, SettingRow[]>;
+export type MasterSettingKey = Exclude<SettingMenuKey, "roles" | "users">;
+export type SettingRowsByMenu = Record<MasterSettingKey, SettingRow[]>;
 
 export type SettingFormValues = Record<string, string>;
 
@@ -51,5 +58,4 @@ export type SettingDefinition = {
   columns: SettingColumn[];
   formFields: SettingFormField[];
   validationSchema: AnyObjectSchema;
-  rows: SettingRow[];
 };

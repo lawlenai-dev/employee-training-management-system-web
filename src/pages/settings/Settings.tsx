@@ -10,35 +10,46 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { getSettingsSection } from "../../config/settingsSections";
+import type { SettingsSection } from "../../config/settingsSections";
 import HeroCover from "../../components/HeroCover";
 import { Button } from "../../components/Ui";
 import DataTable from "../../components/DataTable";
 import PersonalSetting from "./components/PersonnalSetting";
 import SettingFormModal from "./modals/SettingFormModal";
+import AccessSettingsPanel from "./components/AccessSettingsPanel";
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import {
+  saveSetting,
+  deleteSetting,
+} from "../../features/settings/settingsSlice";
 import type {
   SettingDefinition,
   SettingMenuKey,
   SettingRow,
-  SettingRowsByMenu,
 } from "./settings.types";
 import { settingsConfig } from "./components/settingsConfig";
+import SectionSettings from "./components/SectionSettings";
 
 type ActiveMenuKey = SettingMenuKey | "personal";
 
-const createInitialRows = (): SettingRowsByMenu => ({
-  users: [...settingsConfig.users.rows],
-  positions: [...settingsConfig.positions.rows],
-  suppliers: [...settingsConfig.suppliers.rows],
-  categories: [...settingsConfig.categories.rows],
-  types: [...settingsConfig.types.rows],
-});
 /* ---------------- Component ---------------- */
 
 export default function Settings() {
-  const [activeMenu, setActiveMenu] = useState<ActiveMenuKey>("users");
+  const [params] = useSearchParams();
+  const section = getSettingsSection(params.get("section"));
+  return <SettingsSectionPage key={section.id} section={section} />;
+}
+function SettingsSectionPage({ section }: { section: SettingsSection }) {
+  const [activeMenu, setActiveMenu] = useState<ActiveMenuKey>(
+    section.menus[0]!,
+  );
   const [search, setSearch] = useState("");
-  const [rowsByMenu, setRowsByMenu] =
-    useState<SettingRowsByMenu>(createInitialRows);
+  const dispatch = useAppDispatch();
+  const rowsByMenu = useAppSelector((state) => state.settings.rowsByMenu);
+  const [editingRow, setEditingRow] = useState<SettingRow | null>(null);
+  const [error, setError] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const currentSetting =
@@ -48,11 +59,16 @@ export default function Settings() {
   const filteredRows = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
-    if (activeMenu === "personal") {
+    if (
+      activeMenu === "personal" ||
+      activeMenu === "roles" ||
+      activeMenu === "users" ||
+      activeMenu === "sections"
+    ) {
       return [];
     }
 
-    const rows = rowsByMenu[activeMenu];
+    const rows = rowsByMenu[activeMenu] ?? [];
 
     if (!keyword) {
       return rows;
@@ -69,38 +85,48 @@ export default function Settings() {
     setActiveMenu(menuKey);
     setSearch("");
     setIsAddModalOpen(false);
+    setEditingRow(null);
+    setError("");
   };
 
   const handleAdd = () => {
+    setEditingRow(null);
+    setError("");
     if (activeMenu !== "personal") {
       setIsAddModalOpen(true);
     }
   };
 
   const handleSave = (values: Record<string, unknown>) => {
-    if (activeMenu === "personal") return;
-
-    const menuKey = activeMenu;
-    const newRow: SettingRow = {
-      id: `${menuKey}-${Date.now()}`,
-      ...values,
-    };
-
-    setRowsByMenu((previousRows) => ({
-      ...previousRows,
-      [menuKey]: [...previousRows[menuKey], newRow],
-    }));
+    if (
+      activeMenu === "personal" ||
+      activeMenu === "roles" ||
+      activeMenu === "users"
+    )
+      return;
+    dispatch(saveSetting(activeMenu, values, editingRow?.id));
     setIsAddModalOpen(false);
+    setEditingRow(null);
   };
-
   const handleEdit = (row: SettingRow) => {
-    // TODO: เชื่อมต่อ modal แก้ไขข้อมูล
-    console.info("Edit setting row", row);
+    setEditingRow(row);
+    setError("");
+    setIsAddModalOpen(true);
   };
-
   const handleDelete = (row: SettingRow) => {
-    // TODO: เชื่อมต่อขั้นตอนยืนยันและลบข้อมูล
-    console.info("Delete setting row", row);
+    if (
+      activeMenu === "personal" ||
+      activeMenu === "roles" ||
+      activeMenu === "users"
+    )
+      return;
+    if (!window.confirm("ยืนยันลบรายการนี้?")) return;
+    try {
+      dispatch(deleteSetting(activeMenu, row.id));
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "ลบไม่สำเร็จ");
+    }
   };
 
   const tableColumns = useMemo(
@@ -129,9 +155,8 @@ export default function Settings() {
         imagePosition="center"
         eyebrow="System Configuration"
         eyebrowIcon={SettingsIcon}
-        title="ตั้งค่า"
-        // highlight="ระบบฝึกอบรม"
-        description="จัดการผู้ใช้งาน สิทธิ์ หมวดหมู่ และประเภทหลักสูตร"
+        title={section.label}
+        description={section.description}
       />
 
       <section className="relative z-10 -mt-10 px-4 pb-20 sm:px-6 lg:px-8">
@@ -145,7 +170,7 @@ export default function Settings() {
                 </div>
 
                 <div>
-                  <h2 className="font-bold text-heading">Settings</h2>
+                  <h2 className="font-bold text-heading">{section.label}</h2>
 
                   <p className="text-xs text-muted">ตั้งค่าการทำงานของระบบ</p>
                 </div>
@@ -153,11 +178,12 @@ export default function Settings() {
             </div>
 
             <nav className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-              {/*  Personnal Information Setting  */}
-              <button
-                type="button"
-                onClick={() => handleSelectMenu("personal")}
-                className={`
+              {/* Personal data belongs to general settings only. */}
+              {section.menus.includes("personal") && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectMenu("personal")}
+                  className={`
                         group flex items-center gap-3 rounded-control
                         px-3 py-3 text-left transition
                         ${
@@ -166,9 +192,9 @@ export default function Settings() {
                             : "text-body hover:bg-brand-50 hover:text-brand-600"
                         }
                       `}
-              >
-                <span
-                  className={`
+                >
+                  <span
+                    className={`
                           flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
                           ${
                             activeMenu === "personal"
@@ -176,41 +202,46 @@ export default function Settings() {
                               : "bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-brand-600"
                           }
                         `}
-                >
-                  <UsersRound size={18} />
-                </span>
-
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">
-                    Personal
-                  </span>
-
-                  <span
-                    className={`hidden truncate text-xs lg:block ${
-                      activeMenu === "personal" ? "text-white/65" : "text-muted"
-                    }`}
                   >
-                    ส่วนข้อมูลส่วนบุคคล
+                    <UsersRound size={18} />
                   </span>
-                </span>
 
-                <ChevronRight size={17} className="hidden lg:block" />
-              </button>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">
+                      Personal
+                    </span>
+
+                    <span
+                      className={`hidden truncate text-xs lg:block ${
+                        activeMenu === "personal"
+                          ? "text-white/65"
+                          : "text-muted"
+                      }`}
+                    >
+                      ส่วนข้อมูลส่วนบุคคล
+                    </span>
+                  </span>
+
+                  <ChevronRight size={17} className="hidden lg:block" />
+                </button>
+              )}
               {(
                 Object.entries(settingsConfig) as [
                   SettingMenuKey,
                   SettingDefinition,
                 ][]
-              ).map(([menuKey, menu]) => {
-                const MenuIcon = menu.icon;
-                const isActive = activeMenu === menuKey;
+              )
+                .filter(([menuKey]) => section.menus.includes(menuKey))
+                .map(([menuKey, menu]) => {
+                  const MenuIcon = menu.icon;
+                  const isActive = activeMenu === menuKey;
 
-                return (
-                  <button
-                    key={menuKey}
-                    type="button"
-                    onClick={() => handleSelectMenu(menuKey)}
-                    className={`
+                  return (
+                    <button
+                      key={menuKey}
+                      type="button"
+                      onClick={() => handleSelectMenu(menuKey)}
+                      className={`
                         group flex items-center gap-3 rounded-control
                         px-3 py-3 text-left transition
                         ${
@@ -219,9 +250,9 @@ export default function Settings() {
                             : "text-body hover:bg-brand-50 hover:text-brand-600"
                         }
                       `}
-                  >
-                    <span
-                      className={`
+                    >
+                      <span
+                        className={`
                           flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
                           ${
                             isActive
@@ -229,28 +260,28 @@ export default function Settings() {
                               : "bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-brand-600"
                           }
                         `}
-                    >
-                      <MenuIcon size={18} />
-                    </span>
-
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">
-                        {menu.title}
-                      </span>
-
-                      <span
-                        className={`hidden truncate text-xs lg:block ${
-                          isActive ? "text-white/65" : "text-muted"
-                        }`}
                       >
-                        {menu.thaiTitle}
+                        <MenuIcon size={18} />
                       </span>
-                    </span>
 
-                    <ChevronRight size={17} className="hidden lg:block" />
-                  </button>
-                );
-              })}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">
+                          {menu.title}
+                        </span>
+
+                        <span
+                          className={`hidden truncate text-xs lg:block ${
+                            isActive ? "text-white/65" : "text-muted"
+                          }`}
+                        >
+                          {menu.thaiTitle}
+                        </span>
+                      </span>
+
+                      <ChevronRight size={17} className="hidden lg:block" />
+                    </button>
+                  );
+                })}
             </nav>
           </aside>
 
@@ -258,6 +289,10 @@ export default function Settings() {
           <main className="min-w-0">
             {activeMenu === "personal" ? (
               <PersonalSetting />
+            ) : activeMenu === "roles" || activeMenu === "users" ? (
+              <AccessSettingsPanel key={activeMenu} kind={activeMenu} />
+            ) : activeMenu === "sections" ? (
+              <SectionSettings />
             ) : (
               <div className="overflow-hidden rounded-card border border-border bg-surface shadow-card">
                 {/* Header */}
@@ -311,6 +346,14 @@ export default function Settings() {
                   </div>
                 </div>
 
+                {error && (
+                  <p
+                    role="alert"
+                    className="mx-5 my-3 rounded-xl bg-red-50 p-3 text-sm text-red-700"
+                  >
+                    {error}
+                  </p>
+                )}
                 <DataTable
                   columns={tableColumns}
                   data={filteredRows}
@@ -365,7 +408,7 @@ export default function Settings() {
                     แสดง {filteredRows.length} รายการ
                   </p>
 
-                  <p className="text-xs text-muted">ข้อมูลตัวอย่าง</p>
+                  <p className="text-xs text-muted">ข้อมูลจาก Redux</p>
                 </div>
               </div>
             )}
@@ -373,14 +416,19 @@ export default function Settings() {
         </div>
       </section>
 
-      {activeMenu !== "personal" && (
-        <SettingFormModal
-          open={isAddModalOpen}
-          setting={settingsConfig[activeMenu]}
-          onClose={() => setIsAddModalOpen(false)}
-          onSave={handleSave}
-        />
-      )}
+      {activeMenu !== "personal" &&
+        activeMenu !== "roles" &&
+        activeMenu !== "users" &&
+        activeMenu !== "sections" && (
+          <SettingFormModal
+            open={isAddModalOpen}
+            setting={settingsConfig[activeMenu]}
+            mode={editingRow ? "edit" : "create"}
+            initialValue={editingRow}
+            onClose={() => setIsAddModalOpen(false)}
+            onSave={handleSave}
+          />
+        )}
     </>
   );
 }
@@ -441,7 +489,9 @@ function CellValue({ column, value }: CellValueProps) {
       tier2: "Tier 2",
       tier3: "Tier 3",
     };
-    return <span className="text-sm text-body">{labels[String(value)] ?? "—"}</span>;
+    return (
+      <span className="text-sm text-body">{labels[String(value)] ?? "—"}</span>
+    );
   }
 
   if (column === "code" || column === "username") {

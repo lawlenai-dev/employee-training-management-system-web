@@ -110,10 +110,7 @@ export function EmployeePhotoInput({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-slate-700">
-        รูปพนักงาน
-      </p>
-
+      
       {/* กรอบถ่ายรูป */}
       <div className="overflow-hidden rounded-2xl border border-border bg-white">
         <div className="relative flex aspect-[4/3] max-h-80 items-center justify-center overflow-hidden bg-slate-950">

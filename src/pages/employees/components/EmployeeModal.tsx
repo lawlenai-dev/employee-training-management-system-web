@@ -1,180 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { ImagePlus, Save, Upload, UserPlus, X } from "lucide-react";
+import { Save, UserPlus, Eye, Pencil, X } from "lucide-react";
 import { createPortal } from "react-dom";
-import Autocomplete from "../../../components/Autocomplete";
-import { Button, Input } from "../../../components/Ui";
+import { Button } from "../../../components/Ui";
 import { positionMockup } from "../../../data";
-import { EmployeePhotoInput } from "../../../components/EmployeePhotoInput";
+import EmployeeFields from "./EmployeeFields";
+import { EMPTY_FORM, FIELD_RULES, fieldLabels, normalizeEmployee, resolvedRule, canEdit, buildEmployeeChanges, calculateAge } from "./employeeModel";
+import type { EmployeeForm, EmployeeField, EmployeeModalProps, LookupOption } from "./employeeModel";
+export * from "./employeeModel";
 
-export type EmployeeStatus = "active" | "resigned" | "canceled";
-
-export type EmployeeForm = {
-  employee_code: string;
-  prefix: string;
-  first_name: string;
-  last_name: string;
-  department: string;
-  position: string;
-  birth_date: string;
-  nationality: string;
-  company: string;
-  gender: string;
-  note: string;
-  photo: File | null;
-  photo_url: string;
-  status: EmployeeStatus;
-};
-
-export type EmployeeFormSubmission = EmployeeForm & {
-  calculated_age: number | "";
-};
-
-export type LookupOption = {
-  code: string;
-  name: string;
-};
-
-type SelectOption = {
-  value: string;
-  label: string;
-};
-
-type SelectFieldProps = {
-  label: string;
-  required?: boolean;
-  value: string;
-  onChange: (value: string) => void;
-  options?: SelectOption[];
-  disabled?: boolean;
-};
-
-type EmployeeModalProps = {
-  open: boolean;
-  mode?: "create" | "edit";
-  title?: string;
-  description?: string;
-  submitLabel?: string;
-  initialData?: Partial<EmployeeForm> | null;
-  departments?: LookupOption[];
-  positions?: LookupOption[];
-  nationalities?: LookupOption[];
-  companies?: LookupOption[];
-  saving?: boolean;
-  error?: string;
-  onClose: () => void;
-  onSubmit: (form: EmployeeFormSubmission) => void | Promise<void>;
-};
-
-const EMPTY_FORM: EmployeeForm = {
-  employee_code: "",
-  prefix: "",
-  first_name: "",
-  last_name: "",
-  department: "",
-  position: "",
-  birth_date: "",
-  nationality: "",
-  company: "",
-  gender: "",
-  note: "",
-  photo: null,
-  photo_url: "",
-  status: "active",
-};
-
-const prefixOptions = [
-  { value: "mr", label: "นาย" },
-  { value: "mrs", label: "นาง" },
-  { value: "miss", label: "นางสาว" },
-];
-
-const statusOptions = [
-  { value: "active", label: "ใช้งาน" },
-  { value: "resigned", label: "ลาออก" },
-  { value: "canceled", label: "ยกเลิก" },
-];
-
-const genderOptions = [
-  { value: "male", label: "ชาย" },
-  { value: "female", label: "หญิง" },
-  { value: "other", label: "อื่น ๆ" },
-];
-
-function calculateAge(birthDate: string): number | "" {
-  if (!birthDate) {
-    return "";
-  }
-
-  const birth = new Date(birthDate);
-  const today = new Date();
-
-  if (Number.isNaN(birth.getTime()) || birth > today) {
-    return "";
-  }
-
-  let age = today.getFullYear() - birth.getFullYear();
-
-  const hasNotHadBirthday =
-    today.getMonth() < birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() &&
-      today.getDate() < birth.getDate());
-
-  if (hasNotHadBirthday) {
-    age -= 1;
-  }
-
-  return age;
-}
-
-function SelectField({
-  label,
-  required = false,
-  value,
-  onChange,
-  options = [],
-  disabled = false,
-}: SelectFieldProps) {
+export default function EmployeeModal(props: EmployeeModalProps) {
+  if (!props.open) return null;
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-slate-700">
-        {label}
-        {required && <span className="ml-1 text-danger-600">*</span>}
-      </span>
-
-      <select
-        required={required}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        className="
-          h-11 w-full rounded-control border border-border
-          bg-white px-3.5 text-sm text-body
-          outline-none transition
-          focus:border-brand-500 focus:ring-4 focus:ring-brand-100
-          disabled:cursor-not-allowed disabled:bg-slate-100
-          disabled:text-slate-500
-        "
-      >
-        <option value="">กรุณาเลือก</option>
-
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <EmployeeModalContent
+      key={`${props.mode ?? "create"}:${props.recordKey ?? props.initialData?.employee_code ?? "new"}`}
+      {...props}
+    />
   );
 }
-
-export default function EmployeeModal({
-  open,
+function EmployeeModalContent({
   mode = "create",
   title,
   description,
   submitLabel,
   initialData = null,
+  fieldRules,
   departments = [],
   positions = positionMockup as LookupOption[],
   nationalities = [],
@@ -183,549 +33,309 @@ export default function EmployeeModal({
   error = "",
   onClose,
   onSubmit,
+  onUpdate,
+  children,
+  footer,
 }: EmployeeModalProps) {
-  const [form, setForm] = useState<EmployeeForm>(EMPTY_FORM);
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-
-  const isEdit = mode === "edit";
-
-  const age = useMemo(() => calculateAge(form.birth_date), [form.birth_date]);
-
+  // Snapshot taken when the modal opens; parent rerenders do not erase unsaved input.
+  const [original] = useState(() => normalizeEmployee(initialData));
+  const [form, setForm] = useState<EmployeeForm>(original);
+  const [previewUrl, setPreviewUrl] = useState(original.photo_url);
+  const [submitting, setSubmitting] = useState(false);
+  const [localError, setLocalError] = useState("");
+  const [notice, setNotice] = useState("");
+  const busyRef = useRef(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const view = mode === "view";
+  const Container = view ? "div" : "form";
+  const busy = saving || submitting;
+  const data = view ? normalizeEmployee(initialData) : form;
+  const lookups: Partial<Record<EmployeeField, LookupOption[]>> = {
+    department: departments,
+    position: positions,
+    nationality: nationalities,
+    company: companies,
+  };
+  const editable = (field: EmployeeField) => canEdit(field, mode, fieldRules);
+  const required = (field: EmployeeField) =>
+    editable(field) && resolvedRule(field, fieldRules).required.includes(mode);
+  const close = () => {
+    if (!busy && !busyRef.current) onClose();
+  };
+  useEffect(
+    () => () => {
+      if (previewUrl.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+    },
+    [previewUrl],
+  );
   useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setForm({
-      ...EMPTY_FORM,
-      ...initialData,
-      photo: null,
-    });
-
-    setPreviewUrl(initialData?.photo_url || "");
-  }, [open, initialData]);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    const previousOverflow = document.body.style.overflow;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !saving) {
-        onClose();
-      }
-    };
-
-    // ป้องกันหน้าเว็บด้านหลังเลื่อน
+    const previous = document.body.style.overflow;
+    const focus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleKeyDown);
-
+    dialogRef.current?.focus();
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previous;
+      focus?.focus();
     };
-  }, [open, saving, onClose]);
-
-  if (!open) {
-    return null;
-  }
-
+  }, []);
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy && !busyRef.current) onClose();
+    };
+    document.addEventListener("keydown", keydown);
+    return () => document.removeEventListener("keydown", keydown);
+  }, [busy, onClose]);
   const updateField = <K extends keyof EmployeeForm>(
     field: K,
     value: EmployeeForm[K],
   ) => {
-    setForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
+    const policyField = field === "photo_url" ? "photo" : field;
+    if (!editable(policyField)) return;
+    setForm((current) => ({ ...current, [field]: value }));
+    setLocalError("");
+    setNotice("");
   };
-
-  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
+  const handleCapturedPhoto = (file: File) => {
+    if (!editable("photo")) return;
     if (!file.type.startsWith("image/")) {
+      setLocalError("กรุณาเลือกไฟล์รูปภาพ");
       return;
     }
-
-    if (previewUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
     updateField("photo", file);
     setPreviewUrl(URL.createObjectURL(file));
   };
-
+  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) handleCapturedPhoto(file);
+  };
   const handleRemovePhoto = () => {
-    if (previewUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
+    if (!editable("photo")) return;
     setPreviewUrl("");
-    setForm((current) => ({
-      ...current,
-      photo: null,
-      photo_url: "",
-    }));
+    setForm((current) => ({ ...current, photo: null, photo_url: "" }));
   };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLElement>) => {
     event.preventDefault();
-
-    // Age ใช้แสดงผล ไม่แนะนำให้เก็บลง Database
-    onSubmit({
-      ...form,
-      calculated_age: age,
-    });
-  };
-
-  const selectedDepartment =
-    departments.find((item) => item.code === form.department) || null;
-
-  const selectedPosition =
-    positions.find((item) => item.code === form.position) || null;
-
-  const selectedNationality =
-    nationalities.find((item) => item.code === form.nationality) || null;
-
-  const selectedCompany =
-    companies.find((item) => item.code === form.company) || null;
-
-  const handleCapturedPhoto = (file: File) => {
-    setPhotoFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    if (view || busy || busyRef.current) return;
+    for (const key of Object.keys(FIELD_RULES) as EmployeeField[]) {
+      if (!required(key)) continue;
+      const value =
+        key === "photo" ? form.photo || form.photo_url : form[key].trim();
+      if (!value) {
+        setLocalError(`กรุณาระบุ${fieldLabels[key]}`);
+        return;
+      }
+    }
+    if (
+      editable("birth_date") &&
+      form.birth_date &&
+      calculateAge(form.birth_date) === ""
+    ) {
+      setLocalError("กรุณาระบุวันเกิดที่ถูกต้องและไม่เกินวันนี้");
+      return;
+    }
+    for (const key of [
+      "department",
+      "position",
+      "nationality",
+      "company",
+    ] as const) {
+      if (!editable(key) || (mode === "edit" && form[key] === original[key]))
+        continue;
+      const options = lookups[key] ?? [];
+      if (
+        form[key] &&
+        options.length &&
+        !options.some((option) => option.code === form[key])
+      ) {
+        setLocalError(`กรุณาเลือก${fieldLabels[key]}จากรายการ`);
+        return;
+      }
+    }
+    if (mode === "create" && !onSubmit) {
+      setLocalError("ยังไม่ได้เชื่อมฟังก์ชัน onSubmit สำหรับสร้างพนักงาน");
+      return;
+    }
+    if (mode === "edit" && !onUpdate) {
+      setLocalError("ยังไม่ได้เชื่อมฟังก์ชัน onUpdate สำหรับแก้ไขพนักงาน");
+      return;
+    }
+    const changes = buildEmployeeChanges(form, original, fieldRules);
+    if (mode === "edit" && !Object.keys(changes).length) {
+      setNotice("ยังไม่มีข้อมูลที่เปลี่ยนแปลง");
+      return;
+    }
+    busyRef.current = true;
+    setSubmitting(true);
+    setLocalError("");
+    setNotice("");
+    try {
+      if (mode === "edit") await onUpdate!(changes);
+      else {
+        // Ignore initialData values for fields that are not editable during creation.
+        const payload = { ...EMPTY_FORM };
+        for (const key of Object.keys(FIELD_RULES) as EmployeeField[]) {
+          if (editable(key)) Object.assign(payload, { [key]: form[key] });
+        }
+        if (editable("photo")) payload.photo_url = form.photo_url;
+        await onSubmit!({
+          ...payload,
+          calculated_age: calculateAge(payload.birth_date),
+        });
+      }
+      onClose();
+    } catch (error) {
+      setLocalError(
+        error instanceof Error
+          ? error.message
+          : "บันทึกข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง",
+      );
+    } finally {
+      busyRef.current = false;
+      setSubmitting(false);
+    }
   };
   return createPortal(
     <div
       role="presentation"
-      className="
-      fixed inset-0 z-[9999]
-      overflow-y-auto overscroll-contain
-      bg-slate-900/50 backdrop-blur-[2px]
-    "
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:p-6"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !saving) {
-          onClose();
-        }
+        if (event.target === event.currentTarget) close();
       }}
     >
-      {/* ตัวจัดตำแหน่ง Modal */}
       <div
-        className="
-        flex min-h-full items-start justify-center
-        p-0 sm:items-center sm:p-6
-      "
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onKeyDown={(event) => {
+          if (event.key !== "Tab") return;
+          const nodes = Array.from(
+            event.currentTarget.querySelectorAll<HTMLElement>(
+              'button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), a[href]',
+            ),
+          ).filter((node) => node.getClientRects().length > 0);
+          const first = nodes[0];
+          const last = nodes[nodes.length - 1];
+          if (!first) {
+            event.preventDefault();
+            return;
+          }
+          if (
+            event.shiftKey &&
+            (document.activeElement === first ||
+              document.activeElement === event.currentTarget)
+          ) {
+            event.preventDefault();
+            last.focus();
+          } else if (
+            !event.shiftKey &&
+            (document.activeElement === last ||
+              document.activeElement === event.currentTarget)
+          ) {
+            event.preventDefault();
+            first.focus();
+          }
+        }}
+        className="flex max-h-[100dvh] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-2xl outline-none sm:max-h-[92dvh] sm:rounded-2xl"
       >
-        {/* Modal */}
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="employee-modal-title"
-          className="
-          relative w-full max-w-4xl
-          overflow-hidden bg-white shadow-2xl
-          sm:my-6 sm:rounded-2xl
-        "
-          onMouseDown={(event) => event.stopPropagation()}
-        >
-          {/* Header */}
-          <div
-            className="
-            flex items-center justify-between
-            border-b border-border
-            bg-gradient-to-r from-brand-50 to-white
-            px-5 py-4 sm:px-6
-          "
-          >
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
-                <UserPlus size={19} />
-              </span>
-
-              <div>
-                <h2
-                  id="employee-modal-title"
-                  className="font-bold text-heading"
-                >
-                  {title ??
-                    (isEdit ? "แก้ไขข้อมูลพนักงาน" : "เพิ่มข้อมูลพนักงาน")}
-                </h2>
-
-                <p className="mt-0.5 text-sm text-muted">
-                  {description ?? "กรอกข้อมูลพื้นฐานสำหรับสร้างบัญชีและบัตร QR"}
-                </p>
-              </div>
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border bg-white px-5 py-5 sm:px-7">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+              {view ? (
+                <Eye size={22} />
+              ) : mode === "edit" ? (
+                <Pencil size={22} />
+              ) : (
+                <UserPlus size={22} />
+              )}
+            </span>
+            <div>
+              <h2 id={titleId} className="text-lg font-bold text-heading">
+                {title ??
+                  (view
+                    ? "ข้อมูลพนักงาน"
+                    : mode === "edit"
+                      ? "แก้ไขข้อมูลพนักงาน"
+                      : "เพิ่มข้อมูลพนักงาน")}
+              </h2>
+              <p className="mt-1 text-xs text-muted">
+                {description ??
+                  (view
+                    ? "รายละเอียดข้อมูลพนักงาน"
+                    : "กรอกข้อมูลให้ครบถ้วน ช่องที่มีเครื่องหมาย * จำเป็นต้องระบุ")}
+              </p>
             </div>
-
-            <button
-              type="button"
-              aria-label="ปิดหน้าต่าง"
-              disabled={saving}
-              onClick={onClose}
-              className="
-              flex h-9 w-9 items-center justify-center
-              rounded-lg text-slate-400 transition
-              hover:bg-slate-100 hover:text-slate-700
-              disabled:cursor-not-allowed disabled:opacity-50
-            "
-            >
-              <X size={20} />
-            </button>
           </div>
-
-          <form
-            onSubmit={handleSubmit}
-            className="flex min-h-0 flex-1 flex-col"
+          <button
+            type="button"
+            aria-label="ปิดหน้าต่าง"
+            onClick={close}
+            disabled={busy}
+            className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200 disabled:opacity-50"
           >
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {/* Employee code */}
-                <Input
-                  label="รหัสพนักงาน *"
-                  required
-                  placeholder="เช่น EMP001"
-                  value={form.employee_code}
-                  onChange={(event) =>
-                    updateField(
-                      "employee_code",
-                      event.target.value.toUpperCase(),
-                    )
-                  }
-                />
-
-                {/* Prefix */}
-                <SelectField
-                  label="คำนำหน้าชื่อ"
-                  required
-                  value={form.prefix}
-                  options={prefixOptions}
-                  onChange={(value) => updateField("prefix", value)}
-                />
-
-                {/* First name */}
-                <Input
-                  label="ชื่อ *"
-                  required
-                  placeholder="กรอกชื่อ"
-                  value={form.first_name}
-                  onChange={(event) =>
-                    updateField("first_name", event.target.value)
-                  }
-                />
-
-                {/* Last name */}
-                <Input
-                  label="นามสกุล *"
-                  required
-                  placeholder="กรอกนามสกุล"
-                  value={form.last_name}
-                  onChange={(event) =>
-                    updateField("last_name", event.target.value)
-                  }
-                />
-
-                {/* Department */}
-                <Autocomplete
-                  label="แผนก"
-                  required
-                  placeholder="ค้นหาแผนก"
-                  options={departments}
-                  value={selectedDepartment}
-                  getOptionLabel={(option) => `${option.code} - ${option.name}`}
-                  onChange={(option) => {
-                    updateField("department", option?.code || "");
-
-                    // เมื่อเปลี่ยนแผนกให้ล้างตำแหน่งเดิม
-                    updateField("position", "");
-                  }}
-                />
-
-                {/* Position */}
-                <Autocomplete
-                  label="ตำแหน่ง"
-                  required
-                  placeholder="ค้นหาตำแหน่ง"
-                  options={positions}
-                  value={selectedPosition}
-                  getOptionLabel={(option) => `${option.code} - ${option.name}`}
-                  onChange={(option) =>
-                    updateField("position", option?.code || "")
-                  }
-                />
-
-                {/* Birth date */}
-                <Input
-                  label="วันเกิด"
-                  type="date"
-                  value={form.birth_date}
-                  onChange={(event) =>
-                    updateField("birth_date", event.target.value)
-                  }
-                />
-
-                {/* Age */}
-                <Input
-                  label="อายุ"
-                  value={age !== "" ? `${age} ปี` : ""}
-                  placeholder="คำนวณจากวันเกิด"
-                  readOnly
-                  disabled
-                />
-
-                {/* Nationality */}
-                <Autocomplete
-                  label="สัญชาติ"
-                  placeholder="ค้นหาสัญชาติ"
-                  options={nationalities}
-                  value={selectedNationality}
-                  getOptionLabel={(option) => `${option.code} - ${option.name}`}
-                  onChange={(option) =>
-                    updateField("nationality", option?.code || "")
-                  }
-                />
-
-                {/* Company */}
-                <Autocomplete
-                  label="บริษัท"
-                  placeholder="ค้นหาบริษัท"
-                  options={companies}
-                  value={selectedCompany}
-                  getOptionLabel={(option) => `${option.code} - ${option.name}`}
-                  onChange={(option) =>
-                    updateField("company", option?.code || "")
-                  }
-                />
-
-                {/* Status */}
-                <SelectField
-                  label="สถานะ"
-                  required
-                  value={form.status}
-                  options={statusOptions}
-                  onChange={(value) =>
-                    updateField("status", value as EmployeeStatus)
-                  }
-                />
-
-                {/* Gender */}
-                <fieldset>
-                  <legend className="mb-2 block text-sm font-medium text-slate-700">
-                    เพศ
-                  </legend>
-
-                  <div className="flex min-h-11 flex-wrap items-center gap-2">
-                    {genderOptions.map((gender) => {
-                      const checked = form.gender === gender.value;
-
-                      return (
-                        <label
-                          key={gender.value}
-                          className={`
-                          flex cursor-pointer items-center gap-2
-                          rounded-control border px-3.5 py-2
-                          text-sm transition
-                          ${
-                            checked
-                              ? "border-brand-500 bg-brand-50 font-semibold text-brand-700"
-                              : "border-border bg-white text-body hover:border-brand-200 hover:bg-brand-50/50"
-                          }
-                        `}
-                        >
-                          <input
-                            type="radio"
-                            name="gender"
-                            value={gender.value}
-                            checked={checked}
-                            onChange={(event) =>
-                              updateField("gender", event.target.value)
-                            }
-                            className="h-4 w-4 accent-[#003274]"
-                          />
-
-                          {gender.label}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </fieldset>
-
-                {/* Note */}
-                <label className="block md:col-span-2 xl:col-span-3">
-                  <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                    หมายเหตุ
-                  </span>
-
-                  <textarea
-                    rows={4}
-                    value={form.note}
-                    placeholder="ระบุรายละเอียดหรือหมายเหตุเพิ่มเติม..."
-                    onChange={(event) =>
-                      updateField("note", event.target.value)
-                    }
-                    className="
-                    w-full resize-none rounded-control
-                    border border-border bg-white
-                    px-3.5 py-3 text-sm text-body
-                    outline-none transition
-                    placeholder:text-placeholder
-                    focus:border-brand-500
-                    focus:ring-4 focus:ring-brand-100
-                  "
-                  />
-                </label>
-
-                {/* Photo */}
-                <div className="col-span-full">
-                  <EmployeePhotoInput
-                    previewUrl={previewUrl}
-                    onCapture={handleCapturedPhoto}
-                    onPhotoChange={handlePhotoChange}
-                    onRemove={handleRemovePhoto}
-                  />
-                </div>
-                {/* อันล่าง ui สวยอยู่ เก็บไว้เผื่อเลือก */}
-                {/* <div className="md:col-span-2 xl:col-span-3">
-                  <p className="mb-2 text-sm font-medium text-slate-700">
-                    รูปพนักงาน
-                  </p>
-
-                  <div
-                    className="
-                    flex flex-col gap-4 rounded-2xl
-                    border border-dashed border-brand-200
-                    bg-brand-50/40 p-4 sm:flex-row
-                    sm:items-center
-                  "
-                  >
-                    <div
-                      className="
-                      flex h-28 w-28 shrink-0 items-center
-                      justify-center overflow-hidden rounded-2xl
-                      border border-border bg-white
-                    "
-                    >
-                      {previewUrl ? (
-                        <img
-                          src={previewUrl}
-                          alt="ตัวอย่างรูปพนักงาน"
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <ImagePlus size={30} className="text-slate-300" />
-                      )}
-                    </div>
-
-                    <div className="flex-1">
-                      <p className="font-semibold text-heading">
-                        แนบรูปพนักงาน
-                      </p>
-
-                      <p className="mt-1 text-xs leading-5 text-muted">
-                        รองรับไฟล์ JPG, JPEG, PNG หรือ WEBP แนะนำรูปถ่ายหน้าตรง
-                      </p>
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <label
-                          className="
-                          inline-flex cursor-pointer items-center
-                          gap-2 rounded-control bg-brand-600
-                          px-4 py-2 text-sm font-semibold
-                          text-white transition hover:bg-brand-700
-                        "
-                        >
-                          <Upload size={16} />
-                          เลือกรูปภาพ
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={handlePhotoChange}
-                            className="hidden"
-                          />
-                        </label>
-
-                        {previewUrl && (
-                          <button
-                            type="button"
-                            onClick={handleRemovePhoto}
-                            className="
-                            rounded-control border border-border
-                            bg-white px-4 py-2 text-sm
-                            font-semibold text-slate-600
-                            transition hover:bg-slate-100
-                          "
-                          >
-                            ลบรูป
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div> */}
-
-                {/* Error */}
-                {error && (
-                  <div
-                    role="alert"
-                    className="
-                    rounded-control border border-danger-600/20
-                    bg-danger-50 px-4 py-3
-                    text-sm text-danger-700
-                    md:col-span-2 xl:col-span-3
-                  "
-                  >
-                    {error}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div
-              className="
-              flex shrink-0 flex-col-reverse gap-3
-              border-t border-border bg-slate-50/80
-              px-5 py-4 sm:flex-row sm:justify-end sm:px-6
-            "
-            >
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={saving}
-                onClick={onClose}
+            <X size={20} />
+          </button>
+        </header>
+        <Container onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto bg-slate-100/80 p-4 sm:p-6">
+            {view ? <EmployeeFields mode={mode} values={data} fieldRules={fieldRules}
+              departments={departments} positions={positions} nationalities={nationalities} companies={companies} /> : (
+              <fieldset disabled={busy} className="min-w-0">
+                <EmployeeFields mode={mode} values={form} fieldRules={fieldRules}
+                  departments={departments} positions={positions} nationalities={nationalities} companies={companies}
+                  onChange={updateField} previewUrl={previewUrl} onCapture={handleCapturedPhoto}
+                  onPhotoChange={handlePhotoChange} onRemovePhoto={handleRemovePhoto} />
+              </fieldset>
+            )}
+            {children}
+            {(localError || error) && (
+              <p
+                role="alert"
+                className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
               >
-                ยกเลิก
+                {localError || error}
+              </p>
+            )}
+            {notice && (
+              <p
+                role="status"
+                className="mt-5 rounded-xl bg-blue-50 p-4 text-sm text-blue-700"
+              >
+                {notice}
+              </p>
+            )}
+          </div>
+          <footer className="flex shrink-0 flex-col-reverse gap-3 border-t border-border bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+            {footer ?? <>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy}
+              onClick={close}
+            >
+              {view ? "ปิด" : "ยกเลิก"}
+            </Button>
+            {!view && (
+              <Button
+                type="submit"
+                disabled={busy}
+                className="!bg-accent-500 hover:!bg-accent-600"
+              >
+                <Save size={18} />
+                {busy
+                  ? "กำลังบันทึก..."
+                  : (submitLabel ??
+                    (mode === "edit" ? "บันทึกการแก้ไข" : "บันทึกพนักงาน"))}
               </Button>
-
-              <Button type="submit" disabled={saving}>
-                {saving ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                    กำลังบันทึก...
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    {submitLabel ??
-                      (isEdit ? "บันทึกการแก้ไข" : "บันทึกพนักงาน")}
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </div>
+            )}
+            </>}
+          </footer>
+        </Container>
       </div>
     </div>,
     document.body,

@@ -17,21 +17,14 @@ import type { LucideIcon } from "lucide-react";
 import DataTable from "../../../components/DataTable";
 import { Button } from "../../../components/Ui";
 
-type SettingKey = "nationalities" | "bloodTypes" | "genders" | "prefixes";
-type Status = "active" | "inactive";
-
-type PersonalForm = {
-  code: string;
-  nameTh: string;
-  nameEn: string;
-  status: Status;
-};
-
-type PersonalRow = PersonalForm & {
-  id: number;
-};
-
-type PersonalData = Record<SettingKey, PersonalRow[]>;
+import type {
+  SettingKey,
+  Status,
+  PersonalForm,
+  PersonalRow,
+} from "../../../features/settings/personalSettings.types";
+import { useAppDispatch, useAppSelector } from "../../../app/hooks";
+import { savePersonalSetting } from "../../../features/settings/personalSettingsSlice";
 
 type SettingConfigItem = {
   title: string;
@@ -79,111 +72,6 @@ const settingConfig: Record<SettingKey, SettingConfigItem> = {
   },
 };
 
-const initialData: PersonalData = {
-  nationalities: [
-    {
-      id: 1,
-      code: "TH",
-      nameTh: "ไทย",
-      nameEn: "Thai",
-      status: "active",
-    },
-    {
-      id: 2,
-      code: "MM",
-      nameTh: "เมียนมา",
-      nameEn: "Myanmar",
-      status: "active",
-    },
-    {
-      id: 3,
-      code: "KH",
-      nameTh: "กัมพูชา",
-      nameEn: "Cambodian",
-      status: "active",
-    },
-  ],
-
-  bloodTypes: [
-    {
-      id: 1,
-      code: "A",
-      nameTh: "กรุ๊ปเลือด A",
-      nameEn: "Blood Type A",
-      status: "active",
-    },
-    {
-      id: 2,
-      code: "B",
-      nameTh: "กรุ๊ปเลือด B",
-      nameEn: "Blood Type B",
-      status: "active",
-    },
-    {
-      id: 3,
-      code: "AB",
-      nameTh: "กรุ๊ปเลือด AB",
-      nameEn: "Blood Type AB",
-      status: "active",
-    },
-    {
-      id: 4,
-      code: "O",
-      nameTh: "กรุ๊ปเลือด O",
-      nameEn: "Blood Type O",
-      status: "active",
-    },
-  ],
-
-  genders: [
-    {
-      id: 1,
-      code: "M",
-      nameTh: "ชาย",
-      nameEn: "Male",
-      status: "active",
-    },
-    {
-      id: 2,
-      code: "F",
-      nameTh: "หญิง",
-      nameEn: "Female",
-      status: "active",
-    },
-    {
-      id: 3,
-      code: "O",
-      nameTh: "อื่น ๆ",
-      nameEn: "Other",
-      status: "active",
-    },
-  ],
-
-  prefixes: [
-    {
-      id: 1,
-      code: "MR",
-      nameTh: "นาย",
-      nameEn: "Mr.",
-      status: "active",
-    },
-    {
-      id: 2,
-      code: "MRS",
-      nameTh: "นาง",
-      nameEn: "Mrs.",
-      status: "active",
-    },
-    {
-      id: 3,
-      code: "MS",
-      nameTh: "นางสาว",
-      nameEn: "Ms.",
-      status: "active",
-    },
-  ],
-};
-
 const EMPTY_FORM: PersonalForm = {
   code: "",
   nameTh: "",
@@ -219,6 +107,7 @@ type PersonalSettingModalProps = {
   initialValue: PersonalRow | null;
   onClose: () => void;
   onSave: (form: PersonalForm) => void;
+  error?: string;
 };
 
 function PersonalSettingModal({
@@ -228,6 +117,7 @@ function PersonalSettingModal({
   initialValue,
   onClose,
   onSave,
+  error,
 }: PersonalSettingModalProps) {
   const [form, setForm] = useState<PersonalForm>(EMPTY_FORM);
   const isEdit = mode === "edit";
@@ -356,6 +246,14 @@ function PersonalSettingModal({
             </button>
           </div>
 
+          {error && (
+            <p
+              role="alert"
+              className="mx-5 mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"
+            >
+              {error}
+            </p>
+          )}
           <form onSubmit={handleSubmit}>
             <div className="grid gap-5 px-5 py-6 sm:grid-cols-2 sm:px-6">
               <label className="block">
@@ -471,7 +369,9 @@ function PersonalSettingModal({
 export default function PersonalSetting() {
   const [activeSetting, setActiveSetting] =
     useState<SettingKey>("nationalities");
-  const [data, setData] = useState<PersonalData>(initialData);
+  const dispatch = useAppDispatch();
+  const data = useAppSelector((state) => state.personalSettings);
+  const [saveError, setSaveError] = useState("");
   const [search, setSearch] = useState("");
 
   const [modal, setModal] = useState<{
@@ -549,6 +449,7 @@ export default function PersonalSetting() {
   };
 
   const handleCreate = () => {
+    setSaveError("");
     setModal({
       open: true,
       mode: "create",
@@ -557,6 +458,7 @@ export default function PersonalSetting() {
   };
 
   const handleEdit = (row: PersonalRow) => {
+    setSaveError("");
     setModal({
       open: true,
       mode: "edit",
@@ -573,43 +475,19 @@ export default function PersonalSetting() {
   };
 
   const handleSave = (form: PersonalForm) => {
-    const editingRowId = modal.row?.id;
-
-    setData((current) => {
-      const rows = current[activeSetting] ?? [];
-
-      if (modal.mode === "edit") {
-        return {
-          ...current,
-          [activeSetting]: rows.map((row) =>
-            row.id === editingRowId
-              ? {
-                  ...row,
-                  ...form,
-                }
-              : row,
-          ),
-        };
-      }
-
-      const nextId =
-        rows.length > 0
-          ? Math.max(...rows.map((row) => Number(row.id))) + 1
-          : 1;
-
-      return {
-        ...current,
-        [activeSetting]: [
-          ...rows,
-          {
-            id: nextId,
-            ...form,
-          },
-        ],
-      };
-    });
-
-    handleCloseModal();
+    try {
+      dispatch(
+        savePersonalSetting(
+          activeSetting,
+          form,
+          modal.mode === "edit" ? modal.row?.id : undefined,
+        ),
+      );
+      setSaveError("");
+      handleCloseModal();
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : "บันทึกไม่สำเร็จ");
+    }
   };
 
   return (
@@ -754,6 +632,7 @@ export default function PersonalSetting() {
       </div>
 
       <PersonalSettingModal
+        error={saveError}
         open={modal.open}
         mode={modal.mode}
         setting={currentSetting}

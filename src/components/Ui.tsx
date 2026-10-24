@@ -53,7 +53,8 @@ export function Button({
       ? "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
       : variant === "danger"
         ? "bg-red-600 text-white hover:bg-red-700"
-        : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm";
+        : "bg-accent-500 text-white hover:bg-accent-600 shadow-sm";
+
   return (
     <button
       className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${className}`}

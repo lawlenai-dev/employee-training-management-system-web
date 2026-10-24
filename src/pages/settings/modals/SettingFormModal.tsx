@@ -1,40 +1,49 @@
 import { Form, Formik } from "formik";
 import { X } from "lucide-react";
-import { useEffect, useId, useMemo } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Button } from "../../../components/Ui";
 import type {
   SettingDefinition,
   SettingFormValues,
+  SettingRow,
 } from "../settings.types";
 
 export type SettingFormModalProps = {
   open: boolean;
+  mode?: "create" | "edit";
+  initialValue?: SettingRow | null;
   setting: SettingDefinition;
   onClose: () => void;
-  onSave: (values: Record<string, unknown>) => void;
+  onSave: (values: Record<string, unknown>) => void | Promise<void>;
 };
 
 export default function SettingFormModal({
   open,
+  mode = "create",
+  initialValue = null,
   setting,
   onClose,
   onSave,
 }: SettingFormModalProps) {
   const formId = useId();
+  const [saveError, setSaveError] = useState("");
   const titleId = `${formId}-title`;
 
   const initialValues = useMemo(
     () =>
       setting.formFields.reduce<SettingFormValues>((result, field) => {
-        result[field.key] = field.defaultValue ?? "";
+        result[field.key] = String(
+          initialValue?.[field.key] ?? field.defaultValue ?? "",
+        );
         return result;
       }, {}),
-    [setting.formFields],
+    [setting.formFields, initialValue],
   );
 
   useEffect(() => {
     if (!open) return;
+    setSaveError("");
 
     const previousOverflow = document.body.style.overflow;
     const handleEscape = (event: KeyboardEvent) => {
@@ -64,22 +73,27 @@ export default function SettingFormModal({
         initialValues={initialValues}
         validationSchema={setting.validationSchema}
         enableReinitialize
-        onSubmit={(values, helpers) => {
+        onSubmit={async (values, helpers) => {
           const normalizedValues = setting.formFields.reduce<
             Record<string, unknown>
           >((result, field) => {
-            if (field.key === "supplierTier" && values.role !== "Supplier") {
-              return result;
-            }
             const value = values[field.key]?.trim() ?? "";
             result[field.key] =
               field.type === "number" ? Number(value || 0) : value;
             return result;
           }, {});
 
-          onSave(normalizedValues);
-          helpers.resetForm();
-          helpers.setSubmitting(false);
+          try {
+            setSaveError("");
+            await onSave(normalizedValues);
+            helpers.resetForm();
+          } catch (cause) {
+            setSaveError(
+              cause instanceof Error ? cause.message : "บันทึกไม่สำเร็จ",
+            );
+          } finally {
+            helpers.setSubmitting(false);
+          }
         }}
       >
         {({
@@ -88,8 +102,6 @@ export default function SettingFormModal({
           values,
           handleBlur,
           handleChange,
-          setValues,
-          setFieldTouched,
           isSubmitting,
         }) => (
           <Form
@@ -102,7 +114,9 @@ export default function SettingFormModal({
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-white px-5 py-5 sm:px-6">
               <div>
                 <h2 id={titleId} className="text-xl font-bold text-heading">
-                  {setting.addLabel}
+                  {mode === "edit"
+                    ? `แก้ไข${setting.thaiTitle}`
+                    : setting.addLabel}
                 </h2>
                 <p className="mt-1 text-sm text-muted">
                   กรอกข้อมูลให้ครบ แล้วกดบันทึก
@@ -119,11 +133,16 @@ export default function SettingFormModal({
               </button>
             </div>
 
+            {saveError && (
+              <p
+                role="alert"
+                className="mx-5 mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"
+              >
+                {saveError}
+              </p>
+            )}
             <div className="grid gap-5 px-5 py-6 sm:grid-cols-2 sm:px-6">
               {setting.formFields.map((field, index) => {
-                if (field.key === "supplierTier" && values.role !== "Supplier") {
-                  return null;
-                }
                 const inputId = `${formId}-${field.key}`;
                 const errorId = `${inputId}-error`;
                 const error =
@@ -140,19 +159,10 @@ export default function SettingFormModal({
                   name: field.key,
                   value: values[field.key] ?? "",
                   onChange: (
-                    event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
-                  ) => {
-                    if (field.key === "role" && "supplierTier" in values) {
-                      void setValues({
-                        ...values,
-                        role: event.target.value,
-                        supplierTier: "",
-                      });
-                      void setFieldTouched("supplierTier", false, false);
-                    } else {
-                      handleChange(event);
-                    }
-                  },
+                    event: ChangeEvent<
+                      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+                    >,
+                  ) => handleChange(event),
                   onBlur: handleBlur,
                   "aria-required": field.required,
                   "aria-invalid": Boolean(error),

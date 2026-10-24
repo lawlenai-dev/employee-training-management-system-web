@@ -3,11 +3,7 @@ import { Route, Routes } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import { Loading } from "./components/Ui";
-import {
-  AuthProvider,
-  HomeRedirect,
-  ProtectedRoute,
-} from "./auth/AuthContext";
+import { AuthProvider, HomeRedirect, ProtectedRoute } from "./auth/AuthContext";
 import { PreRegistrationProvider } from "./auth/PreRegistrationContext";
 
 const Dashboard = lazy(() => import("./pages/dashboard/Dashboard"));
@@ -19,6 +15,11 @@ const PreRegistrations = lazy(
 );
 const Login = lazy(() => import("./pages/Login"));
 const Settings = lazy(() => import("./pages/settings/Settings"));
+const AccidentReports = lazy(() => import("./pages/reports/AccidentReports"));
+const WarningLetters = lazy(() => import("./pages/reports/WarningLetters"));
+const SurveillanceReports = lazy(
+  () => import("./pages/reports/SurveillanceReports"),
+);
 
 export default function App() {
   return (
@@ -26,75 +27,116 @@ export default function App() {
       <PreRegistrationProvider>
         <Suspense fallback={<Loading />}>
           <Routes>
-          <Route path="/" element={<HomeRedirect />} />
+            <Route path="/" element={<HomeRedirect />} />
 
-          <Route path="/login" element={<Login />} />
-          <Route
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
+            <Route path="/login" element={<Login />} />
             <Route
-              path="/dashboard"
               element={
-                <ProtectedRoute permissions={["dashboard.view"]}>
-                  <Dashboard />
+                <ProtectedRoute>
+                  <Layout />
                 </ProtectedRoute>
               }
-            />
-            <Route
-              path="/courses"
-              element={
-                <ProtectedRoute permissions={["courses.view"]}>
-                  <Courses />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/courses/:id/attendance"
-              element={
-                <ProtectedRoute permissions={["attendance.view"]}>
-                  <Attendance />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/employees"
-              element={
-                <ProtectedRoute
-                  permissions={[
-                    "employees.view_all",
-                    "employees.view_company",
-                  ]}
-                >
-                  <Employees />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pre-registrations"
-              element={
-                <ProtectedRoute
-                  permissions={[
-                    "preregistration.view_own",
-                    "preregistration.review",
-                  ]}
-                >
-                  <PreRegistrations />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute permissions={["settings.view"]}>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
+            >
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute permissions={["dashboard.view"]}>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/courses"
+                element={
+                  <ProtectedRoute permissions={["courses.view"]}>
+                    <Courses />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/courses/:id/attendance"
+                element={
+                  <ProtectedRoute permissions={["attendance.view"]}>
+                    <Attendance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/employees"
+                element={
+                  <ProtectedRoute
+                    permissions={[
+                      "employees.view_all",
+                      "employees.view_company",
+                    ]}
+                  >
+                    <Employees />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/pre-registrations"
+                element={
+                  <ProtectedRoute
+                    permissions={[
+                      "preregistration.view_own",
+                      "preregistration.review",
+                    ]}
+                  >
+                    <PreRegistrations />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute permissions={["settings.view"]}>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reports/accidents"
+                element={
+                  <ProtectedRoute
+                    permissions={[
+                      "preregistration.view_own",
+                      "preregistration.review",
+                    ]}
+                  >
+                    <AccidentReports />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/reports/warnings"
+                element={
+                  <ProtectedRoute
+                    permissions={[
+                      "preregistration.view_own",
+                      "preregistration.review",
+                    ]}
+                  >
+                    <WarningLetters />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/reports/surveillance"
+                element={
+                  <ProtectedRoute
+                    permissions={[
+                      "preregistration.view_own",
+                      "preregistration.review",
+                    ]}
+                  >
+                    <SurveillanceReports />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
 
             <Route path="*" element={<HomeRedirect />} />
           </Routes>

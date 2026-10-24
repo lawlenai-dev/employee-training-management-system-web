@@ -2,6 +2,7 @@ import {
   Building2,
   BriefcaseBusiness,
   Eye,
+  Pencil,
   IdCard,
   Plus,
   Printer,
@@ -16,7 +17,8 @@ import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { employeesMockup, positionMockup } from "../../data";
 import { useAuth } from "../../auth/AuthContext";
-import { PreRegistration, usePreRegistrations } from "../../auth/PreRegistrationContext";
+import { usePreRegistrations } from "../../auth/PreRegistrationContext";
+import type { PreRegistration } from "../../auth/PreRegistrationContext";
 import {
   Button,
   Card,
@@ -28,9 +30,16 @@ import {
 import HeroCover from "../../components/HeroCover";
 import DataTable from "../../components/DataTable";
 import EmployeeModal from "./components/EmployeeModal";
-import type { EmployeeFormSubmission } from "./components/EmployeeModal";
+import {
+  getEmployeeFullName,
+  toEmployeeForm,
+} from "./components/employeeModel";
+import type {
+  EmployeeFormSubmission,
+  EmployeeUpdateSubmission,
+} from "./components/EmployeeModal";
 import EmployeeDetailModal, {
-  EmployeeTrainingHistory,
+  type EmployeeTrainingHistory,
 } from "./components/EmployeeDetailModal";
 
 type Employee = {
@@ -160,28 +169,101 @@ export default function Employees() {
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
 
-  const submit = (payload: EmployeeFormSubmission) => {
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [employeeEdits, setEmployeeEdits] = useState<
+    Record<string, Partial<Employee>>
+  >({});
+  const canEditEmployee =
+    hasPermission("employees.create") ||
+    hasPermission("preregistration.create");
+  const readPhoto = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("อ่านรูปพนักงานไม่สำเร็จ"));
+      reader.readAsDataURL(file);
+    });
+  const updateEmployee = async (changes: EmployeeUpdateSubmission) => {
+    if (!editingEmployee || !canEditEmployee)
+      throw new Error("ไม่มีสิทธิ์แก้ไขข้อมูลพนักงาน");
+    const photoUrl = changes.photo
+      ? await readPhoto(changes.photo)
+      : changes.photo_url;
+    const original = toEmployeeForm(editingEmployee);
+    const values = {
+      ...original,
+      ...changes,
+      ...(photoUrl !== undefined ? { photo_url: photoUrl } : {}),
+      photo: null,
+    };
+    if (hasPermission("preregistration.create")) {
+      const request = { ...values, requestType: "update" as const };
+      submitRequest(request);
+      setNotice("ส่งคำขอแก้ไขให้ Admin ตรวจสอบแล้ว");
+    } else {
+      setEmployeeEdits((current) => ({
+        ...current,
+        [String(editingEmployee.id)]: {
+          ...current[String(editingEmployee.id)],
+          ...values,
+          full_name: getEmployeeFullName(values),
+          is_active: values.status === "active" ? 1 : 0,
+          supplier_name: values.company,
+        },
+      }));
+      setNotice("บันทึกการแก้ไขแล้ว (ข้อมูล Demo ในหน้านี้)");
+    }
+    setEditingEmployee(null);
+  };
+  const submit = async (payload: EmployeeFormSubmission) => {
     setError("");
     setNotice("");
 
     if (hasPermission("preregistration.create")) {
-      submitRequest(payload);
+      const photo_url = payload.photo
+        ? await readPhoto(payload.photo)
+        : payload.photo_url;
+      const request = {
+        ...payload,
+        photo_url,
+        photo: null,
+        requestType: "register" as const,
+      };
+      submitRequest(request);
       setShow(false);
       setNotice("ส่งข้อมูล Pre-register ให้ Admin ตรวจสอบแล้ว");
       return;
     }
 
+    const usedCodes = new Set([
+      ...employees.map((item) => item.employee_code),
+      ...requests.map((item) => item.employee_code ?? ""),
+    ]);
+    let nextNo =
+      Math.max(
+        0,
+        ...[...usedCodes].map((code) =>
+          /^EMP\d+$/.test(code) ? Number(code.slice(3)) : 0,
+        ),
+      ) + 1;
+    while (usedCodes.has(`EMP${String(nextNo).padStart(6, "0")}`)) nextNo++;
+    const code =
+      payload.employee_code || `EMP${String(nextNo).padStart(6, "0")}`;
+    const photo_url = payload.photo
+      ? await readPhoto(payload.photo)
+      : payload.photo_url;
     const newEmployee: Employee = {
-      id: Date.now(),
-      employee_code: payload.employee_code,
-      first_name: payload.first_name,
-      last_name: payload.last_name,
-      full_name: `${payload.first_name} ${payload.last_name}`.trim(),
-      department: payload.department,
-      position: payload.position,
+      ...payload,
+      photo: null,
+      photo_url,
+      id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+      employee_code: code,
+      full_name: getEmployeeFullName(payload),
       is_active: payload.status === "active" ? 1 : 0,
-      qr_token: payload.employee_code,
-      supplier_id: payload.company ? 101 : undefined,
+      qr_token: code,
+      supplier_id:
+        employees.find((item) => item.supplier_name === payload.company)
+          ?.supplier_id ?? user?.supplierId,
       supplier_name: payload.company,
     };
 
@@ -190,28 +272,40 @@ export default function Employees() {
   };
 
   const registeredEmployees = useMemo<Employee[]>(() => {
-    const approvedEmployees: Employee[] = requests
+    const byCode = new Map<string, Employee>();
+    employees.forEach((employee) =>
+      byCode.set(employee.employee_code, employee),
+    );
+    requests
       .filter(
-        (request): request is PreRegistration  & { employee_code: string } =>
+        (request): request is PreRegistration & { employee_code: string } =>
           request.requestStatus === "approved" &&
           Boolean(request.employee_code?.trim()),
       )
-      .map((request) => ({
-        id: request.id,
-        employee_code: request.employee_code,
-        first_name: request.first_name,
-        last_name: request.last_name,
-        full_name: `${request.first_name} ${request.last_name}`.trim(),
-        department: request.department,
-        position: request.position,
-        is_active: request.status === "active" ? 1 : 0,
-        qr_token: request.employee_code,
-        supplier_id: request.supplierId,
-        supplier_name: request.supplierName,
-      }));
-
-    return [...employees, ...approvedEmployees];
-  }, [employees, requests]);
+      .sort((a, b) =>
+        (a.reviewedAt ?? a.submittedAt).localeCompare(
+          b.reviewedAt ?? b.submittedAt,
+        ),
+      )
+      .forEach((request) => {
+        const old = byCode.get(request.employee_code);
+        byCode.set(request.employee_code, {
+          ...old,
+          ...request,
+          id: old?.id ?? request.id,
+          employee_code: request.employee_code,
+          full_name: getEmployeeFullName(request),
+          is_active: request.status === "active" ? 1 : 0,
+          qr_token: old?.qr_token ?? request.employee_code,
+          supplier_id: request.supplierId,
+          supplier_name: request.supplierName,
+        });
+      });
+    return [...byCode.values()].map((employee) => ({
+      ...employee,
+      ...employeeEdits[String(employee.id)],
+    }));
+  }, [employees, requests, employeeEdits]);
 
   const visibleEmployees = useMemo(() => {
     if (hasPermission("employees.view_all")) return registeredEmployees;
@@ -442,12 +536,6 @@ export default function Employees() {
               </div>
             )}
 
-            {!hasPermission("employees.view_all") && (
-              <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                บัญชี Supplier เห็นเฉพาะข้อมูลของ {user?.name} เท่านั้น
-              </div>
-            )}
-
             {/* filter และ Search */}
             <div className="mt-5 grid gap-4 border-t border-border pt-5 sm:grid-cols-2 lg:grid-cols-4">
               {hasPermission("employees.view_all") && (
@@ -621,6 +709,22 @@ export default function Employees() {
             />
           )}
 
+          {editingEmployee && (
+            <EmployeeModal
+              open
+              mode="edit"
+              initialData={toEmployeeForm(editingEmployee)}
+              recordKey={editingEmployee.id}
+              onClose={() => setEditingEmployee(null)}
+              onUpdate={updateEmployee}
+              title={
+                hasPermission("preregistration.create")
+                  ? "ส่งคำขอแก้ไขข้อมูลพนักงาน"
+                  : "แก้ไขข้อมูลพนักงาน"
+              }
+            />
+          )}
+
           {/* Employee table */}
           {employees === null ? (
             <Card className="py-16">
@@ -663,6 +767,18 @@ export default function Employees() {
                     >
                       <Eye size={18} />
                     </button>
+
+                    {canEditEmployee && (
+                      <button
+                        type="button"
+                        title="แก้ไขข้อมูลพนักงาน"
+                        aria-label={`แก้ไข ${employee.employee_code}`}
+                        onClick={() => setEditingEmployee(employee)}
+                        className="inline-flex items-center gap-2 rounded-control bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                    )}
 
                     <button
                       type="button"

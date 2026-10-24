@@ -160,7 +160,7 @@ export default function SessionModal({
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <Input
-                  label="วิทยากร (เพิ่มได้หลายคน)"
+                  label="วิทยากร"
                   value={instructor}
                   placeholder=""
                   onChange={(event) => setInstructor(event.target.value)}
