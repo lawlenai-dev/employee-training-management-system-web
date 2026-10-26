@@ -20,7 +20,7 @@ export const demoAccounts = [
     id: 3,
     username: "supplier",
     password: "1234",
-    name: "Supplier A",
+    name: "Subcontract A",
     role: "supplier",
     supplierId: 101,
   },

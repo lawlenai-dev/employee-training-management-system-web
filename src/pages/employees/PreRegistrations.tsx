@@ -144,7 +144,7 @@ export default function PreRegistrations() {
         highlight="พนักงาน"
         description={
           canReview
-            ? "ตรวจสอบและอนุมัติข้อมูลพนักงานที่ Supplier ส่งเข้ามา"
+            ? "ตรวจสอบและอนุมัติข้อมูลพนักงานที่ Subcontract ส่งเข้ามา"
             : "ติดตามสถานะข้อมูลพนักงานที่บริษัทส่งให้ Admin ตรวจสอบ"
         }
       />

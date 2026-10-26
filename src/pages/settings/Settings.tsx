@@ -467,7 +467,7 @@ function CellValue({ column, value }: CellValueProps) {
       Admin: "bg-brand-50 text-brand-700",
       HR: "bg-purple-50 text-purple-700",
       Trainer: "bg-accent-50 text-accent-700",
-      Supplier: "bg-orange-50 text-orange-700",
+      Subcontract: "bg-orange-50 text-orange-700",
       Viewer: "bg-slate-100 text-slate-600",
     };
 

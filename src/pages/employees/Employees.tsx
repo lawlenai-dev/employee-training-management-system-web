@@ -70,7 +70,7 @@ const createDemoEmployees = (): Employee[] =>
   (employeesMockup as Employee[]).map((employee, index) => ({
     ...employee,
     supplier_id: index % 2 === 0 ? 101 : 102,
-    supplier_name: index % 2 === 0 ? "Supplier A" : "Supplier B",
+    supplier_name: index % 2 === 0 ? "Subcontract A" : "Subcontract B",
   }));
 
 const trainingHistoryMockup: EmployeeTrainingHistory[] = [

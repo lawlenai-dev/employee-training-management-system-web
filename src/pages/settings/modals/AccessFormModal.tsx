@@ -257,7 +257,7 @@ export default function AccessFormModal({
                   />
                 </label>
                 <label className="space-y-2 text-sm font-medium">
-                  <span>Supplier Tier (ถ้ามี)</span>
+                  <span>Subcontract Tier (ถ้ามี)</span>
                   <select
                     value={supplierTier}
                     onChange={(event) => setSupplierTier(event.target.value)}

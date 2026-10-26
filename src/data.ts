@@ -694,10 +694,10 @@ const userPermissionMockup: UserPermissionMock[] = [
   },
   {
     id: 4,
-    name: "Supplier A",
+    name: "Subcontract A",
     username: "kittichai",
     department: "Contractor",
-    role: "Supplier",
+    role: "Subcontract",
     status: "inactive",
   },
 ];
@@ -705,7 +705,7 @@ const userPermissionMockup: UserPermissionMock[] = [
 const roleOptions = [
   { label: "Admin", value: "Admin" },
   { label: "Viewer", value: "Viewer" },
-  { label: "Supplier", value: "Supplier" },
+  { label: "Subcontract", value: "Subcontract" },
   { label: "Trainer", value: "Trainer" },
 ];
 

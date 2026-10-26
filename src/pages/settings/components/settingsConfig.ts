@@ -336,10 +336,10 @@ export const settingsConfig: Record<SettingMenuKey, SettingDefinition> = {
   },
 
   subcontractors: {
-    title: "Suppliers",
-    thaiTitle: "บริษัท",
-    description: "จัดการรายชื่อบริษัท",
-    addLabel: "เพิ่มรายชื่อบริษัท",
+    title: "Subcontracts",
+    thaiTitle: "บริษัทผู้รับเหมา",
+    description: "จัดการรายชื่อบริษัทผู้รับเหมา",
+    addLabel: "เพิ่มรายชื่อบริษัทผู้รับเหมา",
     icon: HardHat,
     columns: [
       {
